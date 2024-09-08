@@ -8,6 +8,7 @@ django = "*"
 djangorestframework = "*"
 python-deriv-api = "*"
 pandas = "*"
+python-telegram-bot = "*"
 
 [dev-packages]
 

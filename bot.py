@@ -13,39 +13,38 @@ from deriv_api import DerivAPI
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "core.settings")
 django.setup()
 from traderbot.models import Market, Indicator as IndicatorModel, Signal
-import MetaTrader5 as mt5
 
 class TradingBot:
     def __init__(self, login, password, server):
-        self.login = login
-        self.password = password
-        self.server = server
+        # self.login = login
+        # self.password = password
+        # self.server = server
         self.connected = False
         self.signals_cache = {}
         self.prev_predictions = {}
         self.pending_signals = {}
         self.opened_positions = {}
     
-    def connect(self):
-        if not mt5.initialize(): # type: ignore
-            print("initialize() failed, error code =", mt5.last_error()) # type: ignore
-            mt5.shutdown() # type: ignore
-            self.connected = False
-            return self.connected
-        authorized = mt5.login(self.login, password=self.password, server=self.server) # type: ignore
-        self.connected = authorized
-        return self.connected
+    # def connect(self):
+    #     if not mt5.initialize(): # type: ignore
+    #         print("initialize() failed, error code =", mt5.last_error()) # type: ignore
+    #         mt5.shutdown() # type: ignore
+    #         self.connected = False
+    #         return self.connected
+    #     authorized = mt5.login(self.login, password=self.password, server=self.server) # type: ignore
+    #     self.connected = authorized
+    #     return self.connected
 
-    def disconnect(self):
-        mt5.shutdown() # type: ignore
-        self.connected = False
+    # def disconnect(self):
+    #     mt5.shutdown() # type: ignore
+    #     self.connected = False
 
-    async def fetch_data(self, symbol, timeframe, start, end):
-        if not self.connected:
-            raise Exception("Not connected to MT5")
-        rates = mt5.copy_rates_range(symbol, timeframe, start, end) # type: ignore
-        df = pd.DataFrame(rates)
-        return df
+    # async def fetch_data(self, symbol, timeframe, start, end):
+    #     if not self.connected:
+    #         raise Exception("Not connected to MT5")
+    #     rates = mt5.copy_rates_range(symbol, timeframe, start, end) # type: ignore
+    #     df = pd.DataFrame(rates)
+    #     return df
 
     async def connect_deriv(self, app_id):
         api = DerivAPI(app_id=app_id)
