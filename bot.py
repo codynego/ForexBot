@@ -10,8 +10,7 @@ from deriv_api import DerivAPI
 
 
 # Django setup
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "core.settings")
-django.setup()
+
 from traderbot.models import Market, Indicator as IndicatorModel, Signal
 
 class TradingBot:
@@ -124,7 +123,7 @@ class TradingBot:
                 return None  # Duplicate found
 
             # Save the signal to the database
-            saved_signal = await self.save_to_database("Signal", symbol, signal)
+            # saved_signal = await self.save_to_database("Signal", symbol, signal)
                 
             # Update cache
             self.signals_cache[signal_key] = signal
@@ -136,46 +135,46 @@ class TradingBot:
             signals = await asyncio.gather(*(self.generate_signal(data, symbol=market) for data, market in zip(data_list, market_list)))
             return signals
 
-    async def save_to_database(self, model, symbol, data):
-        if model == "Market":
-            market, created = await sync_to_async(Market.objects.get_or_create)(
-                symbol=symbol, 
-                defaults={
-                    'open': data["open"], 
-                    'high': data["high"], 
-                    'low': data["low"], 
-                    'close': data["close"], 
-                    'volume': data["volume"]
-                }
-            )
-            if created:
-                await sync_to_async(market.save)()
-            return market
+    # async def save_to_database(self, model, symbol, data):
+    #     if model == "Market":
+    #         market, created = await sync_to_async(Market.objects.get_or_create)(
+    #             symbol=symbol, 
+    #             defaults={
+    #                 'open': data["open"], 
+    #                 'high': data["high"], 
+    #                 'low': data["low"], 
+    #                 'close': data["close"], 
+    #                 'volume': data["volume"]
+    #             }
+    #         )
+    #         if created:
+    #             await sync_to_async(market.save)()
+    #         return market
 
-        elif model == "Indicator":
-            indicator, created = await sync_to_async(IndicatorModel.objects.get_or_create)(
-                market=symbol, 
-                defaults={
-                    'rsi': data["rsi"], 
-                    'macd': data["macd"], 
-                    'bollinger_bands': data["bollinger_bands"], 
-                    'moving_average': data["moving_average"]
-                }
-            )
-            if created:
-                await sync_to_async(indicator.save)()
-            return indicator
+    #     elif model == "Indicator":
+    #         indicator, created = await sync_to_async(IndicatorModel.objects.get_or_create)(
+    #             market=symbol, 
+    #             defaults={
+    #                 'rsi': data["rsi"], 
+    #                 'macd': data["macd"], 
+    #                 'bollinger_bands': data["bollinger_bands"], 
+    #                 'moving_average': data["moving_average"]
+    #             }
+    #         )
+    #         if created:
+    #             await sync_to_async(indicator.save)()
+    #         return indicator
 
-        elif model == "Signal":
-            signal, created = await sync_to_async(Signal.objects.get_or_create)(
-                symbol=symbol, 
-                price = data["price"],
-                type = data["type"], 
-                strength = data["strength"],
-            )
-            if created:
-                await sync_to_async(signal.save)()
-            return signal
+    #     elif model == "Signal":
+    #         signal, created = await sync_to_async(Signal.objects.get_or_create)(
+    #             symbol=symbol, 
+    #             price = data["price"],
+    #             type = data["type"], 
+    #             strength = data["strength"],
+    #         )
+    #         if created:
+    #             await sync_to_async(signal.save)()
+    #         return signal
 
     def signal_toString(self, signal):
         if signal is None:
