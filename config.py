@@ -3,7 +3,6 @@ from pickle import MARK
 from re import T
 from dotenv import load_dotenv
 import os
-import MetaTrader5 as mt5
 
 load_dotenv()
 
