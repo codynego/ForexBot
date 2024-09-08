@@ -8,7 +8,7 @@ async def send_telegram_message(bot_token, channel_id, signal):
 
 
 async def main():
-    await send_telegram_message("7538149095:AAHcaUUUlPVwY3q47LSouj3rY5ovNVobPE4", 5039116218, "testing this bot")
+    await send_telegram_message("",3, "testing this bot")
     print("Sent message")
 
 if __name__ == "__main__":

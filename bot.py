@@ -1,6 +1,3 @@
-from datetime import date
-from multiprocessing import process
-import numpy as np
 import pandas as pd
 from utils.indicators import Indicator
 from utils.strategies import Strategy
@@ -9,10 +6,6 @@ from config import Config
 import os
 import django
 from asgiref.sync import sync_to_async
-import time
-import pandas_ta as ta
-import concurrent.futures
-import xgboost as xgb
 from deriv_api import DerivAPI
 
 
