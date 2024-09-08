@@ -54,7 +54,7 @@ async def main():
         print("trying to reconnect...")
         connect = bot.connect_deriv(app_id="1089")
         
-    print("bot connected")
+    print("bot connecteds")
 
     while True:
         await run_bot(api)
