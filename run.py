@@ -1,5 +1,4 @@
 import subprocess
-import psutil
 import time
 
 # Run main.py in the background
