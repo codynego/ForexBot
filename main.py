@@ -42,6 +42,7 @@ async def run_bot(api):
 
 async def main():
     await send_telegram_message("7538149095:AAHcaUUUlPVwY3q47LSouj3rY5ovNVobPE4", Config.TELEGRAM_CHANNEL_ID, "hello everyone, i am a bot")
+    print("message sent")
     connect, api = await bot.connect_deriv(app_id="1089")
     try_count = 0
     while not connect:
