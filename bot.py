@@ -11,7 +11,11 @@ from deriv_api import DerivAPI
 
 # Django setup
 
-from traderbot.models import Market, Indicator as IndicatorModel, Signal
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'fxbot.settings')
+
+django.setup()
+
+from tradebot.models import Market, Indicator as IndicatorModel, Signal
 
 class TradingBot:
     def __init__(self, login, password, server):

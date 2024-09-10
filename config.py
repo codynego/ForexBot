@@ -24,6 +24,7 @@ class Config:
     #TELEGRAM TOKEN
     TELEGRAM_BOT_TOKEN = os.environ['TELEGRAM_BOT_TOKEN']
     TELEGRAM_CHAT_ID = os.environ['TELEGRAM_CHAT_ID']
+    TELEGRAM_CHANNEL_ID = os.environ['TELEGRAM_CHANNEL_ID']
 
     #MARKETS_LIST = ["Boom 1000 Index", "Crash 1000 Index"]
     MARKETS_LIST = ["BOOM1000", "CRASH1000", "BOOM500", "CRASH500"]

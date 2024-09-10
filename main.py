@@ -6,7 +6,9 @@ from telegram import Update
 import logging
 from datetime import datetime, timedelta
 import pytz
-from telebot import send_telegram_message
+from telebot import send_telegram_message, start
+from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, CallbackContext
+import asyncio
 
 
 
@@ -29,12 +31,12 @@ async def run_bot(api):
         #signals = bot.aiprocess_multiple_market(data, Config.MARKETS_LIST, signals2)
             
         for signal in signals:
-
+            print(signal)
             if signal is None or signal["type"] == "HOLD":
                 continue
             else:
                 print(signal)
-                await send_telegram_message("7538149095:AAHcaUUUlPVwY3q47LSouj3rY5ovNVobPE4", 5039116218, bot.signal_toString(signal))
+                await send_telegram_message("7538149095:AAHcaUUUlPVwY3q47LSouj3rY5ovNVobPE4", Config.TELEGRAM_CHANNEL_ID, bot.signal_toString(signal))
                 logging.info("Signal: %s", bot.signal_toString(signal))
     except Exception as e:
         logging.error("Error: %s", str(e))
@@ -62,7 +64,14 @@ async def main():
 
 if __name__ == "__main__":
     try:
-        asyncio.run(main())  # Run the main function using asyncio
+        asyncio.run(main())  
+        # Run the main function using asyncio
+
+        BOT_TOKEN = Config.TELEGRAM_BOT_TOKEN
+        app = ApplicationBuilder().token(BOT_TOKEN).build()
+
+        # Register command handlers
+        app.add_handler(CommandHandler("start", start))
     except KeyboardInterrupt:
         print("Shutting down bot...")
         # Disconnect the bot on exit
