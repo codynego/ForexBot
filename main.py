@@ -33,10 +33,9 @@ async def run_bot(api):
         for signal in signals:
             if signal is None:
                 continue
-            elif signal['type'] == 'HOLD':
-                continue
             else:
                 #print(signal)
+                await send_telegram_message(Config.TELEGRAM_BOT_TOKEN, Config.TELEGRAM_CHANNEL_ID, bot.signal_toString(signal))
                 logging.info("Signal: %s", bot.signal_toString(signal))
     except Exception as e:
         logging.error("Error: %s", str(e))
