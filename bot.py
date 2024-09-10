@@ -130,12 +130,11 @@ class TradingBot:
                 
             # # Update cache
             # self.signals_cache[signal_key] = signal
-            
             return signal
             
 
     async def process_multiple_signals(self, data_list, market_list):
-            # run signals concurret
+            # run signals concurretly
             signals = await asyncio.gather(*(self.generate_signal(data, symbol=market) for data, market in zip(data_list, market_list)))
             return signals
 

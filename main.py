@@ -60,7 +60,7 @@ async def main():
 
     while True:
         await run_bot(api)
-        await asyncio.sleep(300)
+        await asyncio.sleep(900)
 
 if __name__ == "__main__":
     try:
