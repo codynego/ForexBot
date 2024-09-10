@@ -31,7 +31,7 @@ async def run_bot(api):
         #signals = bot.aiprocess_multiple_market(data, Config.MARKETS_LIST, signals2)
             
         for signal in signals:
-            if signal is None or signal["type"] == "HOLD":
+            if signal is None:
                 continue
             else:
                 print(signal)
