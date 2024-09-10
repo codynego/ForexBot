@@ -8,9 +8,7 @@ import django
 from asgiref.sync import sync_to_async
 from deriv_api import DerivAPI
 
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "core.settings")
-django.setup()
-# Django setup
+
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'fxbot.settings')
 
