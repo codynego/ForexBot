@@ -47,7 +47,7 @@ async def main():
     while not connect:
         if try_count >= Config.CONNECTION_TIMEOUT:
             print("failed to connect!")
-            raise Exception("Bot not initialized")
+            raise Exception("Bot not initializeddd")
 
         print("Failed to initialize trading bot.")
         print("retrying in 3 seconds")

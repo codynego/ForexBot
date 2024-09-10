@@ -121,20 +121,21 @@ class TradingBot:
                 signal["type"] = "HOLD"
 
             #Check for duplicate signals
-            signal_key = (symbol, signal["type"])
-            if signal_key in self.signals_cache:
-                return None  # Duplicate found
+            # signal_key = (symbol, signal["type"])
+            # if signal_key in self.signals_cache:
+            #     return None  # Duplicate found
 
-            # Save the signal to the database
-            # saved_signal = await self.save_to_database("Signal", symbol, signal)
+            # # Save the signal to the database
+            # # saved_signal = await self.save_to_database("Signal", symbol, signal)
                 
-            # Update cache
-            self.signals_cache[signal_key] = signal
+            # # Update cache
+            # self.signals_cache[signal_key] = signal
+            
             return signal
             
 
     async def process_multiple_signals(self, data_list, market_list):
-            # run signals concurretly
+            # run signals concurret
             signals = await asyncio.gather(*(self.generate_signal(data, symbol=market) for data, market in zip(data_list, market_list)))
             return signals
 
