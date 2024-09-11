@@ -120,6 +120,12 @@ class TradingBot:
             elif stra == 0:
                 signal["type"] = "HOLD"
 
+
+            if signal['type'].startswith("BOOM") and signal['type'] == "SELL":
+                return None
+            elif signal['type'].startswith("CRASH") and signal['type'] == "BUY":
+                return None
+
             #Check for duplicate signals
             # signal_key = (symbol, signal["type"])
             # if signal_key in self.signals_cache:
