@@ -26,7 +26,7 @@ class Strategy:
 
 
     @classmethod
-    async def rsiStrategy(cls, df, ma_period=10, tolerance=0.02, breakout_threshold=0.015):
+    async def rsiStrategy(cls, df, ma_period=10, tolerance=0.01, breakout_threshold=0.015):
         """
         Generates a buy signal based on MA10 behavior and price proximity.
 

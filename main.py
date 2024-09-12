@@ -37,6 +37,11 @@ async def run_bot(api):
             elif signal["type"] == "HOLD":
                 continue
             else:
+                if signal['type'].startswith("BOOM") and signal['type'] == "SELL":
+                    continue
+                elif signal['type'].startswith("CRASH") and signal['type'] == "BUY":
+                    continue
+
                 await send_telegram_message(Config.TELEGRAM_BOT_TOKEN, Config.TELEGRAM_CHANNEL_ID, bot.signal_toString(signal))
                 logging.info("Signal: %s", bot.signal_toString(signal))
     except Exception as e:
