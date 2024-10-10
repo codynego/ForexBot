@@ -41,3 +41,8 @@ class Indicator:
         tr = df[['high_low', 'high_close', 'low_close']].max(axis=1)
         atr = tr.rolling(window=period).mean()
         return atr
+
+    def ema(self, period):
+        # calculate  the exponential moving average
+        return self.df['close'].ewm(span=period, adjust=False).mean()
+

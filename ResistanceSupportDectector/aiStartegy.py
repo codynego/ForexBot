@@ -1,5 +1,5 @@
 import pandas as pd
-from ResistanceSupportDectector.detector import is_price_near_bollinger_band, is_price_near_ma, is_bollinger_band_support_resistance, is_support_resistance
+from ResistanceSupportDectector.detector import is_price_near_bollinger_band, is_bollinger_band_support_resistance, is_support_resistance
 from utils.indicators import Indicator
 from config import Config
 
@@ -279,8 +279,6 @@ def calculate_signal_strength(
     trend, 
     rsi_value, 
     pivot_point_data, 
-    ma_proximity, 
-    ma48_proximity,
     bb_signal, 
     ma_support_resistance,
     ma48_support_resistance, 
@@ -310,15 +308,15 @@ def calculate_signal_strength(
     strength = 0.5  # Start with neutral strength (0.5 represents neutral, 0 strong sell, 1 strong buy)
 
     ### Moving Average (MA) Proximity and Support/Resistance ###
-    if ma_support_resistance == 'support' and ma_proximity:
+    if ma_support_resistance == 'support':
         strength += 0.1  # Stronger buy signal if the moving average acts as support
-    elif ma_support_resistance == 'resistance' and ma_proximity:
+    elif ma_support_resistance == 'resistance':
         strength -= 0.1  # Stronger sell signal if the moving average acts as resistance
 
 
-    if ma48_support_resistance == 'support' and ma48_proximity:
+    if ma48_support_resistance == 'support':
         strength += 0.1  # Stronger buy signal if the moving average acts as support
-    elif ma48_support_resistance == 'resistance' and ma48_proximity:
+    elif ma48_support_resistance == 'resistance':
         strength -= 0.1  # Stronger sell signal if the moving average acts as resistance
     
     # # If price is near the moving average, slightly boost the signal strength
@@ -401,9 +399,9 @@ class MyStrategy():
         rsi_value = self.rsi.iloc[-1]
         
         # 4. Check if price is near MA
-        ma_proximity = await is_price_near_ma(self.df, ma_period=10, tolerance=0.01)
+        # ma_proximity = await is_price_near_ma(self.df, ma_period=10, tolerance=0.01)
 
-        ma48_proximity = await is_price_near_ma(self.df, ma_period=48, tolerance=0.01)
+        # ma48_proximity = await is_price_near_ma(self.df, ma_period=48, tolerance=0.01)
         
         # 5. Check Bollinger Band signal
         bb_signal = await is_price_near_bollinger_band(self.df, period=20, std_dev=2, tolerance=0.01)
@@ -418,8 +416,6 @@ class MyStrategy():
             trend,
             rsi_value,
             pivot_point_data,
-            ma_proximity,
-            ma48_proximity,
             bb_signal,
             ma_support_resistance,
             ma48_support_resistance,

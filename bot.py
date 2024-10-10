@@ -121,9 +121,9 @@ class TradingBot:
                 signal["type"] = "HOLD"
 
 
-            if signal['type'].startswith("BOOM") and signal['type'] == "SELL":
+            if signal['symbol'].startswith("BOOM") and signal['type'] == "SELL":
                 return None
-            elif signal['type'].startswith("CRASH") and signal['type'] == "BUY":
+            elif signal['symbol'].startswith("CRASH") and signal['type'] == "BUY":
                 return None
 
             #Check for duplicate signals

@@ -1,6 +1,6 @@
 from utils.indicators import Indicator
 #from ResistanceSupportDectector.detector import generate_buy_signal
-from ResistanceSupportDectector.detector import is_support_resistance, is_price_near_ma, is_bollinger_band_support_resistance, is_price_near_bollinger_band
+from ResistanceSupportDectector.detector import ma_support_resistance, check_ema, is_support_resistance, is_bollinger_band_support_resistance, is_price_near_bollinger_band
 import asyncio
 from ResistanceSupportDectector.spikeDectector import detect_spikes
 from ResistanceSupportDectector.aiStartegy import MyStrategy, combine_timeframe_signals
@@ -26,7 +26,7 @@ class Strategy:
 
 
     @classmethod
-    async def rsiStrategy(cls, df, ma_period=10, tolerance=0.01, breakout_threshold=0.015):
+    async def runStrategy(cls, df, ma_period=10, tolerance=0.015, breakout_threshold=0.015):
         """
         Generates a buy signal based on MA10 behavior and price proximity.
 
@@ -39,20 +39,23 @@ class Strategy:
         Returns:
             True if a buy signal is generated, False otherwise.
         """
-        spikes = detect_spikes(df)
+        #spikes = detect_spikes(df)
         # print(len(spikes))
         indicator = Indicator(df)
         ma48 = indicator.moving_average(48)
         # check m0ving average 10 behavior
-        ma10_behavior = await is_support_resistance(df, ma_period)
-        price_near_ma10 = await is_price_near_ma(df, ma_period, tolerance)
-        breakout_10 = df['close'].iloc[-1] > ma48.iloc[-1] * (1 + breakout_threshold)
+        # ma10_behavior = await is_support_resistance(df, ma_period)
+        #price_near_ma10 = await is_price_near_ma(df, ma_period, tolerance)
+        # breakout_10 = df['close'].iloc[-1] > ma48.iloc[-1] * (1 + breakout_threshold)
+
+        ma10_behavior = await is_support_resistance(df, 10)
+        ma48_behavior = await is_support_resistance(df, 48)
 
         # check moving average 48 behavior
 
         ma48_period = 48
-        ma48_behavior = await is_support_resistance(df, 48)
-        price_near_ma48 = await is_price_near_ma(df, ma48_period, tolerance)
+        #ma48_behavior = await is_support_resistance(df, 48)
+        #price_near_ma48 = await is_price_near_ma(df, ma48_period, tolerance)
         breakout_48 = df['close'].iloc[-1] > ma48.iloc[-1] * (1 + breakout_threshold)
 
         # check bolling band behavior
@@ -61,23 +64,26 @@ class Strategy:
         price_near_bb = await is_price_near_bollinger_band(df)
         #breakout_48 = df['close'].iloc[-1] > ma48.iloc[-1] * (1 + breakout_threshold)
 
+        ema_behaviour = await check_ema(df, 200, tolerance)
+
 
         buy_conditions = [
-            ma10_behavior == 'support' and price_near_ma10,
-            ma48_behavior == 'support'and price_near_ma48,
-            bb_behavior == 'support',
-            price_near_bb == 'lower_band'
+            ma10_behavior == 'support',
+            ma48_behavior == 'support',
+            ema_behaviour == 'support',
+            bb_behavior == 'support' and price_near_bb == 'lower_band'
         ]
         #print("buy_condition", buy_conditions)
         sell_conditions = [
-            ma10_behavior == 'resistance' and price_near_ma10,
-            ma48_behavior == 'resistance' and price_near_ma48,
-            bb_behavior == 'resistance',
-            price_near_bb == 'upper_band'
+            ma10_behavior == 'resistance',
+            ma48_behavior == 'resistance',
+            ema_behaviour == 'resistance',
+            bb_behavior == 'resistance' and price_near_bb == 'upper_band'
         ]
         #print("sell_condition", sell_conditions)
         if any(buy_conditions) and not any(sell_conditions):
             return "BUY"
+        
         elif any(sell_conditions) and not any(buy_conditions):
             return "SELL"
         else:
@@ -87,7 +93,7 @@ class Strategy:
         
 
     @classmethod
-    async def process_multiple_timeframes(cls, dataframes, ma_period=10, tolerance=0.02, breakout_threshold=0.015, std_dev=2):
+    async def process_multiple_timeframes(cls, dataframes, ma_period=10, tolerance=0.005, breakout_threshold=0.015, std_dev=2):
         """
         Processes multiple timeframes to generate a buy or sell signal.
 
@@ -106,10 +112,10 @@ class Strategy:
         task2 = []
         for df in dataframes:
             startegy = MyStrategy(df)
-            task2.append(asyncio.create_task(cls.rsiStrategy(df, ma_period, tolerance, breakout_threshold)))
+            task2.append(asyncio.create_task(cls.runStrategy(df, ma_period, tolerance, breakout_threshold)))
             tasks.append(asyncio.create_task(startegy.run()))
 
-        result2 = await asyncio.gather(*task2)
+        result2 = await asyncio.gather(*task2) # type: ignore
         results = await asyncio.gather(*tasks)
         strength, signal = await combine_timeframe_signals(results)
                 #Check if all signals are the same
@@ -120,7 +126,7 @@ class Strategy:
         # else:
         #     return 0
 
-
+        print(result2)
         if all(result == "BUY" for result in result2):
             return [1, strength]
         elif strength >= 0.8:

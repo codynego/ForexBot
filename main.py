@@ -9,7 +9,7 @@ import pytz
 from telebot import send_telegram_message, start
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, CallbackContext
 import asyncio
-
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 
 # # Initialize bot with credentials from config
@@ -31,19 +31,20 @@ async def run_bot(api):
         #signals = bot.aiprocess_multiple_market(data, Config.MARKETS_LIST, signals2)
             
         for signal in signals:
-            
+            print( bot.signal_toString(signal))
             if signal is None:
                 continue
             elif signal["type"] == "HOLD":
                 continue
             else:
-                if signal['type'].startswith("BOOM") and signal['type'] == "SELL":
+                if signal['symbol'].startswith("BOOM") and signal['type'] == "SELL":
                     continue
-                elif signal['type'].startswith("CRASH") and signal['type'] == "BUY":
+                elif signal['symbol'].startswith("CRASH") and signal['type'] == "BUY":
                     continue
-
-                await send_telegram_message(Config.TELEGRAM_BOT_TOKEN, Config.TELEGRAM_CHANNEL_ID, bot.signal_toString(signal))
-                logging.info("Signal: %s", bot.signal_toString(signal))
+            print(bot.signal_toString(signal))
+            print("=============================")
+            #await send_telegram_message(Config.TELEGRAM_BOT_TOKEN, Config.TELEGRAM_CHANNEL_ID, bot.signal_toString(signal))
+            logging.info("Signal: %s", bot.signal_toString(signal))
     except Exception as e:
         logging.error("Error: %s", str(e))
 
@@ -61,12 +62,23 @@ async def main():
 
         print("trying to reconnect...")
         connect = bot.connect_deriv(app_id="1089")
+
+    
         
     print("bot connecteds")
 
+    ping_scheduler = AsyncIOScheduler()
+    ping_scheduler.add_job(api.ping({"ping": 1}), 'interval', minutes=1)
+    ping_scheduler.start()
+
+    scheduler = AsyncIOScheduler()
+    scheduler.add_job(run_bot, 'interval', minutes=15)
+    scheduler.start()
+
     while True:
+        await api.ping({"ping": 1})
         await run_bot(api)
-        await asyncio.sleep(900)
+        await asyncio.sleep(100)
 
 if __name__ == "__main__":
     try:
