@@ -10,6 +10,7 @@ from telebot import send_telegram_message, start
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, CallbackContext
 import asyncio
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from pytz import utc
 
 
 # # Initialize bot with credentials from config
@@ -72,7 +73,7 @@ async def main():
         
     print("bot connecteds")
 
-    scheduler = AsyncIOScheduler()
+    scheduler = AsyncIOScheduler(timezone=utc)
     #scheduler.add_job(ping_api, 'interval', minutes=1, args=[api])
     scheduler.add_job(run_bot, 'interval', minutes=15, args=[api])
     scheduler.start()
