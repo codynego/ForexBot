@@ -35,7 +35,6 @@ async def run_bot(api):
         #signals = bot.aiprocess_multiple_market(data, Config.MARKETS_LIST, signals2)
             
         for signal in signals:
-            print( bot.signal_toString(signal))
             # if signal is None:
             #     continue
             # elif signal["type"] == "HOLD":
@@ -47,7 +46,7 @@ async def run_bot(api):
             #         continue
             print(bot.signal_toString(signal))
             print("=============================")
-            await send_telegram_message(Config.TELEGRAM_BOT_TOKEN, Config.TELEGRAM_CHANNEL_ID, bot.signal_toString(signal))
+            #await send_telegram_message(Config.TELEGRAM_BOT_TOKEN, Config.TELEGRAM_CHANNEL_ID, bot.signal_toString(signal))
             logging.info("Signal: %s", bot.signal_toString(signal))
     except Exception as e:
         logging.error("Error: %s", str(e))
@@ -74,13 +73,15 @@ async def main():
     print("bot connecteds")
 
     scheduler = AsyncIOScheduler()
-    scheduler.add_job(ping_api, 'interval', minutes=1, args=[api])
+    #scheduler.add_job(ping_api, 'interval', minutes=1, args=[api])
     scheduler.add_job(run_bot, 'interval', minutes=15, args=[api])
     scheduler.start()
 
     # Keep the main function running
     while True:
+        await api.ping({"ping": 1})
         await asyncio.sleep(1)
+
 
 
 
