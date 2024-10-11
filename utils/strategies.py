@@ -81,10 +81,10 @@ class Strategy:
             bb_behavior == 'resistance' and price_near_bb == 'upper_band'
         ]
         #print("sell_condition", sell_conditions)
-        if any(buy_conditions) and not any(sell_conditions):
+        if any(buy_conditions):
             return "BUY"
         
-        elif any(sell_conditions) and not any(buy_conditions):
+        elif any(sell_conditions):
             return "SELL"
         else:
             return "HOLD"
@@ -125,18 +125,18 @@ class Strategy:
         #     return -1
         # else:
         #     return 0
-
-        print(result2)
-        if all(result == "BUY" for result in result2):
-            return [1, strength]
-        elif strength >= 0.8:
-            return [1, strength]
-        elif all(result == "SELL" for result in result2):
-            return [-1, strength]
-        elif strength <= 0.25:
-            return [-1, strength]
+        # print(result2)
+ 
+        if all(result[0] == "BUY" for result in result2):
+            return [1, strength, result2]
+        # elif strength >= 0.8:
+        #     return [1, strength]
+        elif all(result[0] == "SELL" for result in result2):
+            return [-1, strength, result2]
+        # elif strength <= 0.25:
+        #     return [-1, strength]
         else:
-            return [0, strength]
+            return [0, strength, result2]
         
 
         # Check if all signals are the same

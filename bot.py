@@ -110,15 +110,18 @@ class TradingBot:
 
         if strategy == "rsistrategy":
             # stra = Strategy.rsiStrategy(data)
-            stra, strength = await Strategy.process_multiple_timeframes(data)
+            result = await Strategy.process_multiple_timeframes(data)
+            if result is None:
+                return None
+            stra, strength, all_signals = result
      
             signal["strength"] = round(strength, 2)
             if stra == 1:
-                signal["type"] = "BUY"
+                signal["type"] = all_signals
             elif stra == -1:
-                signal["type"] = "SELL"
+                signal["type"] = all_signals
             elif stra == 0:
-                signal["type"] = "HOLD"
+                signal["type"] = all_signals
 
 
             if signal['symbol'].startswith("BOOM") and signal['type'] == "SELL":
