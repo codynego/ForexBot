@@ -26,7 +26,7 @@ class Strategy:
 
 
     @classmethod
-    async def runStrategy(cls, df, ma_period=10, tolerance=0.015, breakout_threshold=0.015):
+    async def runStrategy(cls, df, ma_period=10, tolerance=0.025, breakout_threshold=0.015):
         """
         Generates a buy signal based on MA10 behavior and price proximity.
 
@@ -93,7 +93,7 @@ class Strategy:
         
 
     @classmethod
-    async def process_multiple_timeframes(cls, dataframes, ma_period=10, tolerance=0.005, breakout_threshold=0.015, std_dev=2):
+    async def process_multiple_timeframes(cls, dataframes, ma_period=10, tolerance=0.025, breakout_threshold=0.015, std_dev=2):
         """
         Processes multiple timeframes to generate a buy or sell signal.
 
