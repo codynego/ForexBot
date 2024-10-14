@@ -26,7 +26,7 @@ class Strategy:
 
 
     @classmethod
-    async def runStrategy(cls, df, ma_period=10, tolerance=0.025, breakout_threshold=0.015):
+    async def runStrategy(cls, df, ma_period=10, tolerance=0.012, breakout_threshold=0.015):
         """
         Generates a buy signal based on MA10 behavior and price proximity.
 
@@ -61,10 +61,10 @@ class Strategy:
         # check bolling band behavior
         #ma48_period = 48
         bb_behavior = await is_bollinger_band_support_resistance(df)
-        price_near_bb = await is_price_near_bollinger_band(df)
+        price_near_bb = await is_price_near_bollinger_band(df, tolerance=tolerance)
         #breakout_48 = df['close'].iloc[-1] > ma48.iloc[-1] * (1 + breakout_threshold)
 
-        ema_behaviour = await check_ema(df, 200, tolerance)
+        ema_behaviour = await check_ema(df, period=200, tolerance=tolerance)
 
 
         buy_conditions = [
@@ -93,7 +93,7 @@ class Strategy:
         
 
     @classmethod
-    async def process_multiple_timeframes(cls, dataframes, ma_period=10, tolerance=0.025, breakout_threshold=0.015, std_dev=2):
+    async def process_multiple_timeframes(cls, dataframes, ma_period=10, tolerance=0.012, breakout_threshold=0.015, std_dev=2):
         """
         Processes multiple timeframes to generate a buy or sell signal.
 

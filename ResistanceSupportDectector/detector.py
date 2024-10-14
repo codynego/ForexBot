@@ -68,7 +68,7 @@ async def is_support_resistance(df, ma_period=10):
     return support_resistance
 
 
-def ma_support_resistance(df, period, tolerance=0.007, min_touches=2, recent_window=3):
+def ma_support_resistance(df, period, tolerance, min_touches=2, recent_window=3):
     """
     Determines if the Moving Average (MA) is acting as support, resistance, or neutral.
 
@@ -138,7 +138,7 @@ def ma_support_resistance(df, period, tolerance=0.007, min_touches=2, recent_win
 #   last_ma = df['MA'].iloc[-1]
 #   return abs(last_price - last_ma) / last_ma <= tolerance
 
-async def check_ema(df, period=200, tolerance=0.007):
+async def check_ema(df, tolerance, period=200):
     """Check if price is near EMA and if it's acting as support or resistance.
 
     Args:
@@ -195,7 +195,7 @@ async def is_bollinger_band_support_resistance(df, period=20, std_dev=2):
   
 
 
-async def is_price_near_bollinger_band(df, period=20, std_dev=2, tolerance=0.007):
+async def is_price_near_bollinger_band(df, tolerance, period=20, std_dev=2):
   """
   Checks if the current price is near the upper or lower Bollinger Band.
 
