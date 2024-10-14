@@ -89,11 +89,12 @@ async def main():
         except Exception as e:
             logging.error("Run bot failed: %s", str(e))
 
-    ping_scheduler = AsyncIOScheduler(timezone=utc)
-    ping_scheduler.add_job(ping_api, 'interval', minutes=1, args=[api])
-    ping_scheduler.start()
+    # ping_scheduler = AsyncIOScheduler(timezone=utc)
+    # ping_scheduler.add_job(ping_api, 'interval', minutes=1, args=[api])
+    # ping_scheduler.start()
 
     scheduler = AsyncIOScheduler(timezone=utc)
+    scheduler.add_job(ping_api, 'interval', minutes=1, args=[api])
     scheduler.add_job(run_bot_wrapper, 'interval', minutes=15, args=[api])
     scheduler.start()
 
