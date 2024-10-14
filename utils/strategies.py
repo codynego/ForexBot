@@ -1,6 +1,6 @@
 from utils.indicators import Indicator
 #from ResistanceSupportDectector.detector import generate_buy_signal
-from ResistanceSupportDectector.detector import ma_support_resistance, check_ema, is_support_resistance, is_bollinger_band_support_resistance, is_price_near_bollinger_band
+from ResistanceSupportDectector.detector import ma_support_resistance, check_ema, is_support_resistance, is_bollinger_band_support_resistance, is_price_near_bollinger_band, is_price_near_ma
 import asyncio
 from ResistanceSupportDectector.spikeDectector import detect_spikes
 from ResistanceSupportDectector.aiStartegy import MyStrategy, combine_timeframe_signals
@@ -55,7 +55,8 @@ class Strategy:
 
         ma48_period = 48
         #ma48_behavior = await is_support_resistance(df, 48)
-        #price_near_ma48 = await is_price_near_ma(df, ma48_period, tolerance)
+        price_near_ma48 = await is_price_near_ma(df,tolerance, ma_period=48)
+        price_near_ma10 = await is_price_near_ma(df,tolerance, ma_period=10)
         breakout_48 = df['close'].iloc[-1] > ma48.iloc[-1] * (1 + breakout_threshold)
 
         # check bolling band behavior
@@ -68,15 +69,15 @@ class Strategy:
 
 
         buy_conditions = [
-            ma10_behavior == 'support',
-            ma48_behavior == 'support',
+            ma10_behavior == 'support' and price_near_ma10,
+            ma48_behavior == 'support' and price_near_ma48,
             ema_behaviour == 'support',
             bb_behavior == 'support' and price_near_bb == 'lower_band'
         ]
         #print("buy_condition", buy_conditions)
         sell_conditions = [
-            ma10_behavior == 'resistance',
-            ma48_behavior == 'resistance',
+            ma10_behavior == 'resistance' and price_near_ma10,
+            ma48_behavior == 'resistance' and price_near_ma48,
             ema_behaviour == 'resistance',
             bb_behavior == 'resistance' and price_near_bb == 'upper_band'
         ]

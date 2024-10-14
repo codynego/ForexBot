@@ -19,10 +19,6 @@ bot = TradingBot(Config.MT5_LOGIN, Config.MT5_PASSWORD, Config.MT5_SERVER)
 
 # send signal to telegram bot
 
-async def ping_api(api):
-    await api.ping({"ping": 1})
-
-
 async def run_bot(api):
     try:
         print("fetching data...")
@@ -36,10 +32,10 @@ async def run_bot(api):
         #signals = bot.aiprocess_multiple_market(data, Config.MARKETS_LIST, signals2)
             
         for signal in signals:
-            # if signal is None:
-            #     continue
-            # elif signal["type"] == "HOLD":
-            #     continue
+            if signal is None:
+                continue
+            elif signal["type"] == "HOLD":
+                continue
             # else:
             #     if signal['symbol'].startswith("BOOM") and signal['type'] == "SELL":
             #         continue
@@ -52,39 +48,57 @@ async def run_bot(api):
     except Exception as e:
         logging.error("Error: %s", str(e))
 
+
+
+
+
+
+import asyncio
+import logging
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.triggers.interval import IntervalTrigger
+from pytz import utc
+
 async def main():
     connect, api = await bot.connect_deriv(app_id="1089")
     try_count = 0
-    if await api.ping({"ping": 1}):
-        print("API connected")
     while not connect:
         if try_count >= Config.CONNECTION_TIMEOUT:
             print("failed to connect!")
-            raise Exception("Bot not initializeddd")
+            raise Exception("Bot not initialized")
 
         print("Failed to initialize trading bot.")
         print("retrying in 3 seconds")
         await asyncio.sleep(3)
+        try_count += 1
 
         print("trying to reconnect...")
-        connect = bot.connect_deriv(app_id="1089")
+        connect, api = await bot.connect_deriv(app_id="1089")
 
-    
-        
-    print("bot connecteds")
+    print("bot connected")
+
+    async def ping_api(api):
+        try:
+            await api.ping({"ping": 1})
+        except Exception as e:
+            logging.error("Ping failed: %s", str(e))
+
+    async def run_bot_wrapper(api):
+        try:
+            await run_bot(api)
+        except Exception as e:
+            logging.error("Run bot failed: %s", str(e))
+
+    ping_scheduler = AsyncIOScheduler(timezone=utc)
+    ping_scheduler.add_job(ping_api, 'interval', minutes=1, args=[api])
+    ping_scheduler.start()
 
     scheduler = AsyncIOScheduler(timezone=utc)
-    #scheduler.add_job(ping_api, 'interval', minutes=1, args=[api])
-    scheduler.add_job(run_bot, 'interval', minutes=15, args=[api])
+    scheduler.add_job(run_bot_wrapper, 'interval', minutes=15, args=[api])
     scheduler.start()
 
-    # Keep the main function running
     while True:
-        await api.ping({"ping": 1})
         await asyncio.sleep(1)
-
-
-
 
 if __name__ == "__main__":
     try:
