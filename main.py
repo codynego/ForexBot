@@ -19,7 +19,7 @@ bot = TradingBot(Config.MT5_LOGIN, Config.MT5_PASSWORD, Config.MT5_SERVER)
 
 # send signal to telegram bot
 
-async def run_bot(api):
+async def run_bot(api) -> None:
     try:
         print("fetching data...")
         timezone = pytz.timezone("Etc/UTC")
@@ -76,12 +76,21 @@ async def main():
         connect, api = await bot.connect_deriv(app_id="1089")
 
     print("bot connected")
-
     async def ping_api(api):
         try:
             await api.ping({"ping": 1})
         except Exception as e:
             logging.error("Ping failed: %s", str(e))
+            await reconnect(api)
+
+    async def reconnect(api):
+        connect, api = await bot.connect_deriv(app_id="1089")
+        while not connect:
+            print("Retrying to connect...")
+            await asyncio.sleep(3)
+            connect, api = await bot.connect_deriv(app_id="1089")
+        print("Reconnected successfully")
+        await ping_api(api)
 
     async def run_bot_wrapper(api):
         try:
