@@ -34,7 +34,7 @@ async def run_bot(api):
         for signal in signals:
             if signal is None:
                 continue
-            elif signal["type"] == "HOLD":
+            elif signal["type"][0] == "HOLD" and signal["type"][1] == "HOLD" and signal["type"][2] == "HOLD":
                 continue
             # else:
             #     if signal['symbol'].startswith("BOOM") and signal['type'] == "SELL":
