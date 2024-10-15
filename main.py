@@ -107,7 +107,7 @@ async def main():
         await reconnect()
     
     scheduler.add_job(ping_api, 'interval', minutes=1, args=[api])
-    scheduler.add_job(run_bot_wrapper, 'interval', minutes=1, args=[api])
+    scheduler.add_job(run_bot_wrapper, 'interval', minutes=15, args=[api])
     scheduler.start()
 
     while True:
