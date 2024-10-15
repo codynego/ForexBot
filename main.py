@@ -44,14 +44,14 @@ async def run_bot(api) -> None:
 
             # elif signal["type"][0] == "HOLD" and signal["type"][1] == "HOLD" and signal["type"][2] == "HOLD":
             #     continue
-            # else:
-            #     if signal['symbol'].startswith("BOOM") and "SELL" in signal["type"]:
-            #         continue
-            #     elif signal['symbol'].startswith("CRASH") and "BUY" in signal["type"]:
-            #         continue
+            else:
+                if signal['symbol'].startswith("BOOM") and(signal["type"][0] == "SELL" or signal["type"][0] == "SELL"):
+                    continue
+                elif signal['symbol'].startswith("CRASH") and (signal["type"][0] == "BUY" or signal["type"][0] == "BUY"):
+                    continue
             print(bot.signal_toString(signal))
             print("=============================")
-            #await send_telegram_message(Config.TELEGRAM_BOT_TOKEN, Config.TELEGRAM_CHANNEL_ID, bot.signal_toString(signal))
+            await send_telegram_message(Config.TELEGRAM_BOT_TOKEN, Config.TELEGRAM_CHANNEL_ID, bot.signal_toString(signal))
             logging.info("Signal: %s", bot.signal_toString(signal))
     except Exception as e:
         logging.error("Error: %s", str(e))
@@ -115,7 +115,7 @@ async def main():
         await reconnect()
     else:
         scheduler.add_job(ping_api, 'interval', minutes=1, args=[api])
-        scheduler.add_job(run_bot_wrapper, 'interval', minutes=1, args=[api])
+        scheduler.add_job(run_bot_wrapper, 'interval', minutes=15, args=[api])
         scheduler.start()
 
     while True:
