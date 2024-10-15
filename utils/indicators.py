@@ -22,16 +22,36 @@ class Indicator:
         return macd, signal
     
     def bollinger_bands(self, period=20, std=2):
-        data = self.df.head(period)
+        """
+        Calculates the Bollinger Bands for the given period and standard deviation.
+
+        Args:
+            period: Length of the moving average (default is 20).
+            std: Number of standard deviations for the bands (default is 2).
+
+        Returns:
+            A tuple containing the upper and lower Bollinger Bands.
+        """
+        data = self.df
         sma = data['Close'].rolling(window=period).mean()
         std_dev = data['Close'].rolling(window=period).std()
         upper_band = sma + (std_dev * std)
         lower_band = sma - (std_dev * std)
         return upper_band, lower_band
     
-    def moving_average(self, period=10):
-        data = self.df.head(period)
-        return data['close'].rolling(window=period).mean()
+
+    def moving_average(self, period):
+        """
+        Calculates the moving average for a given period.
+
+        Args:
+            df: Pandas DataFrame containing price data with a 'close' column.
+            period: Length of the moving average.
+
+        Returns:
+            Pandas Series containing the moving average.
+        """
+        return self.df['close'].rolling(window=period).mean()
 
     def calculate_atr(self, period=14):
         df = self.df

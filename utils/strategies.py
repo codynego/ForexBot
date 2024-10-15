@@ -26,7 +26,7 @@ class Strategy:
 
 
     @classmethod
-    async def runStrategy(cls, df, tolerance=0.02, breakout_threshold=0.015):
+    async def runStrategy(cls, df, tolerance=0.02, breakout_threshold=0.025):
         """
         Generates a buy signal based on MA10 behavior and price proximity.
 
@@ -69,19 +69,20 @@ class Strategy:
 
 
         buy_conditions = [
-            ma10_behavior == 'support' and price_near_ma10,
-            ma48_behavior == 'support' and price_near_ma48,
+            price_near_ma10 == 'support',
+            price_near_ma48 == 'support',
             ema_behaviour == 'support',
             bb_behavior == 'support' and price_near_bb == 'lower_band'
         ]
+    
         #print("buy_condition", buy_conditions)
         sell_conditions = [
-            ma10_behavior == 'resistance' and price_near_ma10,
-            ma48_behavior == 'resistance' and price_near_ma48,
+            price_near_ma10 == 'resistance',
+            price_near_ma48 == 'resistance',
             ema_behaviour == 'resistance',
             bb_behavior == 'resistance' and price_near_bb == 'upper_band'
         ]
-        #print("sell_condition", sell_conditions)
+        
         if any(buy_conditions):
             return "BUY"
         

@@ -118,25 +118,58 @@ def ma_support_resistance(df, period, tolerance, min_touches=2, recent_window=3)
 
 
 
+# async def is_price_near_ma(df, tolerance, ma_period):
+#   """
+#   Checks if the current price is within a tolerance of the MA.
+
+  # Args:
+  #   df: Pandas DataFrame containing price data with columns 'close' and 'Date'.
+  #   ma_period: Length of the moving average.
+  #   tolerance: Percentage tolerance for considering price near MA.
+
+  # Returns:
+  #   True if the price is within tolerance of the MA, False otherwise.
+  # """
+
+  # indicator = Indicator(df)
+  #   #df['MA'] = df['close'].rolling(window=ma_period).mean()
+  # df['MA'] = indicator.moving_average(ma_period)
+  # last_price = df['close'].iloc[-1]
+  # last_ma = df['MA'].iloc[-1]
+  # return abs(last_price - last_ma) / last_ma <= tolerance
+
 async def is_price_near_ma(df, tolerance, ma_period):
-  """
-  Checks if the current price is within a tolerance of the MA.
+    """
+    Checks if the current price is within a tolerance of the MA and determines if the MA is acting as resistance or support.
 
-  Args:
-    df: Pandas DataFrame containing price data with columns 'close' and 'Date'.
-    ma_period: Length of the moving average.
-    tolerance: Percentage tolerance for considering price near MA.
+    Args:
+        df: Pandas DataFrame containing price data with columns 'close' and 'Date'.
+        ma_period: Length of the moving average.
+        tolerance: Percentage tolerance for considering price near MA.
 
-  Returns:
-    True if the price is within tolerance of the MA, False otherwise.
-  """
+    Returns:
+        'resistance' if the MA is acting as resistance,
+        'support' if the MA is acting as support,
+        None if the price is not near the MA.
+    """
 
-  indicator = Indicator(df)
-    #df['MA'] = df['close'].rolling(window=ma_period).mean()
-  df['MA'] = indicator.moving_average(ma_period)
-  last_price = df['close'].iloc[-1]
-  last_ma = df['MA'].iloc[-1]
-  return abs(last_price - last_ma) / last_ma <= tolerance
+    indicator = Indicator(df)
+    df['ma'] = indicator.moving_average(ma_period)
+  
+    
+    # Get the latest row in the DataFrame
+    latest_row = df.iloc[-1]
+    price = latest_row['close']  # Assuming 'close' is the column for closing prices
+    ma = latest_row['ma']
+    
+    if abs(price - ma) / ma <= tolerance:
+        if price > ma:
+            return 'resistance'
+        else:
+            return 'support'
+    else:
+        return None
+
 
 async def check_ema(df, tolerance, period=200):
     """Check if price is near EMA and if it's acting as support or resistance.
@@ -160,7 +193,7 @@ async def check_ema(df, tolerance, period=200):
         else:
             return 'support'
     else:
-        return None  # Return None if the price is not within the tolerance of the EMA
+        return None  
 
 
 
@@ -184,6 +217,8 @@ async def is_bollinger_band_support_resistance(df, period=20, std_dev=2):
   df['std'] = df['close'].rolling(window=period).std()
   df['upper_band'] = df['MA'] + (df['std'] * std_dev)
   df['lower_band'] = df['MA'] - (df['std'] * std_dev)
+
+
 
   # Determine support or resistance
   if df['close'].iloc[-1] <= df['lower_band'].iloc[-1] and df['close'].iloc[-2] > df['lower_band'].iloc[-2]:
