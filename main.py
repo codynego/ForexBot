@@ -81,9 +81,9 @@ async def main():
             await api.ping({"ping": 1})
         except Exception as e:
             logging.error("Ping failed: %s", str(e))
-            await reconnect(api)
+            # await reconnect()
 
-    async def reconnect(api):
+    async def reconnect():
         connect, api = await bot.connect_deriv(app_id="1089")
         while not connect:
             print("Retrying to connect...")
@@ -103,6 +103,9 @@ async def main():
     # ping_scheduler.start()
 
     scheduler = AsyncIOScheduler(timezone=utc)
+    while not connect:
+        await reconnect()
+    
     scheduler.add_job(ping_api, 'interval', minutes=1, args=[api])
     scheduler.add_job(run_bot_wrapper, 'interval', minutes=15, args=[api])
     scheduler.start()
