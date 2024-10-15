@@ -26,7 +26,7 @@ class Strategy:
 
 
     @classmethod
-    async def runStrategy(cls, df, tolerance=0.015, breakout_threshold=0.025):
+    async def runStrategy(cls, df, tolerance=0.005, breakout_threshold=0.025):
         """
         Generates a buy signal based on MA10 behavior and price proximity.
 
@@ -73,7 +73,10 @@ class Strategy:
             price_near_ma48 == 'support',
             ema_behaviour == 'support',
             bb_behavior == 'support' and price_near_bb == 'lower_band'
+        
         ]
+        # print("buy  conditions: ", buy_conditions)
+
     
         #print("buy_condition", buy_conditions)
         sell_conditions = [
@@ -82,8 +85,11 @@ class Strategy:
             ema_behaviour == 'resistance',
             bb_behavior == 'resistance' and price_near_bb == 'upper_band'
         ]
+        # print("sell _condition", sell_conditions)
+        # print("=========================================")
         
-        if any(buy_conditions):
+        if any(buy_conditions) and not any(sell_conditions):
+
             return "BUY"
         
         elif any(sell_conditions):
@@ -95,7 +101,7 @@ class Strategy:
         
 
     @classmethod
-    async def process_multiple_timeframes(cls, dataframes, ma_period=10, tolerance=0.015, breakout_threshold=0.015, std_dev=2):
+    async def process_multiple_timeframes(cls, dataframes, ma_period=10, tolerance=0.005, breakout_threshold=0.015, std_dev=2):
         """
         Processes multiple timeframes to generate a buy or sell signal.
 
