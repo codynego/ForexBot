@@ -26,7 +26,7 @@ class Strategy:
 
 
     @classmethod
-    async def runStrategy(cls, df, ma_period=10, tolerance=0.012, breakout_threshold=0.015):
+    async def runStrategy(cls, df, tolerance=0.02, breakout_threshold=0.015):
         """
         Generates a buy signal based on MA10 behavior and price proximity.
 
@@ -94,7 +94,7 @@ class Strategy:
         
 
     @classmethod
-    async def process_multiple_timeframes(cls, dataframes, ma_period=10, tolerance=0.012, breakout_threshold=0.015, std_dev=2):
+    async def process_multiple_timeframes(cls, dataframes, ma_period=10, tolerance=0.02, breakout_threshold=0.015, std_dev=2):
         """
         Processes multiple timeframes to generate a buy or sell signal.
 
@@ -113,7 +113,7 @@ class Strategy:
         task2 = []
         for df in dataframes:
             startegy = MyStrategy(df)
-            task2.append(asyncio.create_task(cls.runStrategy(df, ma_period, tolerance, breakout_threshold)))
+            task2.append(asyncio.create_task(cls.runStrategy(df,tolerance, breakout_threshold)))
             tasks.append(asyncio.create_task(startegy.run()))
 
         result2 = await asyncio.gather(*task2) # type: ignore
