@@ -116,12 +116,14 @@ class TradingBot:
             stra, strength, all_signals = result
      
             signal["strength"] = round(strength, 2)
+            
+            #print(all_signals)
             if stra == 1:
-                signal["type"] = all_signals
+                signal["type"] = "BUY"
             elif stra == -1:
-                signal["type"] = all_signals
+                signal["type"] = "HOLD"
             elif stra == 0:
-                signal["type"] = all_signals
+                signal["type"] = "SELL"
 
 
             if signal['symbol'].startswith("BOOM") and signal['type'] == "SELL":

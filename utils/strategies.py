@@ -88,7 +88,7 @@ class Strategy:
         # print("sell _condition", sell_conditions)
         # print("=========================================")
         
-        if any(buy_conditions) and not any(sell_conditions):
+        if any(buy_conditions):
 
             return "BUY"
         
@@ -135,16 +135,16 @@ class Strategy:
         #     return 0
         # print(result2)
  
-        if all(result[0] == "BUY" for result in result2):
+        if all(result == "BUY" for result in result2):
             return [1, strength, result2]
-        # elif strength >= 0.8:
-        #     return [1, strength]
         elif all(result[0] == "SELL" for result in result2):
             return [-1, strength, result2]
-        # elif strength <= 0.25:
-        #     return [-1, strength]
-        else:
+        elif result2[0] == "BUY" and result2[1] == "BUY":
+            return [1, strength, result2]
+        elif result2[0] == "SELL" and result2[1] == "SELL":
             return [0, strength, result2]
+        else:
+            return [-1, strength, result2]
         
 
         # Check if all signals are the same

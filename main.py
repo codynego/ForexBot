@@ -34,16 +34,24 @@ async def run_bot(api) -> None:
         for signal in signals:
             if signal is None:
                 continue
-            elif signal["type"][0] == "HOLD" and signal["type"][1] == "HOLD" and signal["type"][2] == "HOLD":
+            elif  signal["type"] == "HOLD":
                 continue
-            else:
-                if signal['symbol'].startswith("BOOM") and "SELL" in signal["type"]:
-                    continue
-                elif signal['symbol'].startswith("CRASH") and "BUY" in signal["type"]:
-                    continue
+            # else:
+                # if signal['symbol'].startswith("BOOM") and signal["type"] == "SELL":
+                #     continue
+                # elif signal['symbol'].startswith("CRASH") and signal["type"] == "BUY":
+                #     continue
+
+            # elif signal["type"][0] == "HOLD" and signal["type"][1] == "HOLD" and signal["type"][2] == "HOLD":
+            #     continue
+            # else:
+            #     if signal['symbol'].startswith("BOOM") and "SELL" in signal["type"]:
+            #         continue
+            #     elif signal['symbol'].startswith("CRASH") and "BUY" in signal["type"]:
+            #         continue
             print(bot.signal_toString(signal))
             print("=============================")
-            #await send_telegram_message(Config.TELEGRAM_BOT_TOKEN, Config.TELEGRAM_CHANNEL_ID, bot.signal_toString(signal))
+            await send_telegram_message(Config.TELEGRAM_BOT_TOKEN, Config.TELEGRAM_CHANNEL_ID, bot.signal_toString(signal))
             logging.info("Signal: %s", bot.signal_toString(signal))
     except Exception as e:
         logging.error("Error: %s", str(e))
@@ -81,7 +89,7 @@ async def main():
             await api.ping({"ping": 1})
         except Exception as e:
             logging.error("Ping failed: %s", str(e))
-            # await reconnect()
+            await reconnect()
 
     async def reconnect():
         connect, api = await bot.connect_deriv(app_id="1089")
