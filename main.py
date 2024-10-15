@@ -36,11 +36,11 @@ async def run_bot(api) -> None:
                 continue
             elif signal["type"][0] == "HOLD" and signal["type"][1] == "HOLD" and signal["type"][2] == "HOLD":
                 continue
-            # else:
-            #     if signal['symbol'].startswith("BOOM") and signal['type'] == "SELL":
-            #         continue
-            #     elif signal['symbol'].startswith("CRASH") and signal['type'] == "BUY":
-            #         continue
+            else:
+                if signal['symbol'].startswith("BOOM") and "SELL" in signal["type"]:
+                    continue
+                elif signal['symbol'].startswith("CRASH") and "BUY" in signal["type"]:
+                    continue
             print(bot.signal_toString(signal))
             print("=============================")
             #await send_telegram_message(Config.TELEGRAM_BOT_TOKEN, Config.TELEGRAM_CHANNEL_ID, bot.signal_toString(signal))
