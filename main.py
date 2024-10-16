@@ -31,14 +31,14 @@ async def run_bot(api) -> None:
                 continue
 
             # Skip unwanted signals based on market type
-            if (signal['symbol'].startswith("BOOM") and signal["type"][0] == "SELL") or \
-               (signal['symbol'].startswith("CRASH") and signal["type"][0] == "BUY"):
+            if (signal['symbol'].startswith("BOOM") and "SELL" in signal["type"]) or \
+               (signal['symbol'].startswith("CRASH") and "BUY" in signal["type"]):
                 continue
 
             # Send signal to Telegram
             print(bot.signal_toString(signal))
             print("=============================")
-            await send_telegram_message(Config.TELEGRAM_BOT_TOKEN, Config.TELEGRAM_CHANNEL_ID, bot.signal_toString(signal))
+            #await send_telegram_message(Config.TELEGRAM_BOT_TOKEN, Config.TELEGRAM_CHANNEL_ID, bot.signal_toString(signal))
             logging.info("Signal: %s", bot.signal_toString(signal))
             
     except Exception as e:
