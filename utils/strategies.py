@@ -26,7 +26,7 @@ class Strategy:
 
 
     @classmethod
-    async def runStrategy(cls, df, tolerance=0.005, breakout_threshold=0.025):
+    async def runStrategy(cls, df, tolerance, breakout_threshold=0.025):
         """
         Generates a buy signal based on MA10 behavior and price proximity.
 
@@ -100,7 +100,7 @@ class Strategy:
         
 
     @classmethod
-    async def process_multiple_timeframes(cls, dataframes, ma_period=10, tolerance=0.005, breakout_threshold=0.015, std_dev=2):
+    async def process_multiple_timeframes(cls, dataframes, ma_period=10, tolerance=0.0025, breakout_threshold=0.015, std_dev=2):
         """
         Processes multiple timeframes to generate a buy or sell signal.
 
@@ -115,11 +115,15 @@ class Strategy:
             "BUY", "SELL", or "HOLD" based on the combined signals from all timeframes.
         """
         
+        overall_volatility = calculate_overall_volatility_from_df(dataframes)
+        tolerance = tolerance * (1 + overall_volatility)
+        #print("tolerance",  tolerance, "overall_volatility", overall_volatility)
+
         tasks = []
         task2 = []
         for df in dataframes:
             startegy = MyStrategy(df)
-            task2.append(asyncio.create_task(cls.runStrategy(df,tolerance, breakout_threshold)))
+            task2.append(asyncio.create_task(cls.runStrategy(df, float(tolerance), breakout_threshold)))
             tasks.append(asyncio.create_task(startegy.run()))
 
         result2 = await asyncio.gather(*task2) # type: ignore
@@ -133,8 +137,6 @@ class Strategy:
         # else:
         #     return 0
         # print(result2)
-        #volatility = calculate_overall_volatility_from_df(dataframes)
- 
         if all(result == "BUY" for result in result2):
             return [1, strength, result2]
         elif all(result == "SELL" for result in result2):
