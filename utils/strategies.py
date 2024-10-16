@@ -75,7 +75,7 @@ class Strategy:
             bb_behavior == 'support' and price_near_bb == 'lower_band'
         
         ]
-        # print("buy  conditions: ", buy_conditions)
+        #print("buy  conditions: ", buy_conditions)
 
     
         #print("buy_condition", buy_conditions)
@@ -89,7 +89,6 @@ class Strategy:
         # print("=========================================")
         
         if any(buy_conditions):
-
             return "BUY"
         
         elif any(sell_conditions):
@@ -138,7 +137,7 @@ class Strategy:
  
         if all(result == "BUY" for result in result2):
             return [1, strength, result2]
-        elif all(result[0] == "SELL" for result in result2):
+        elif all(result == "SELL" for result in result2):
             return [-1, strength, result2]
         elif result2[0] == "BUY" and result2[1] == "BUY":
             return [1, strength, result2]
