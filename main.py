@@ -38,7 +38,7 @@ async def run_bot(api) -> None:
             # Send signal to Telegram
             print(bot.signal_toString(signal))
             print("=============================")
-            #await send_telegram_message(Config.TELEGRAM_BOT_TOKEN, Config.TELEGRAM_CHANNEL_ID, bot.signal_toString(signal))
+            await send_telegram_message(Config.TELEGRAM_BOT_TOKEN, Config.TELEGRAM_CHANNEL_ID, bot.signal_toString(signal))
             logging.info("Signal: %s", bot.signal_toString(signal))
             
     except Exception as e:
@@ -101,7 +101,7 @@ async def main():
     scheduler = AsyncIOScheduler(timezone=utc)
     
     # Schedule pings every 30 seconds
-    scheduler.add_job(ping_api, 'interval', seconds=30, args=[api])
+    scheduler.add_job(ping_api, 'interval', minutes=1, args=[api])
     
     # Schedule bot to run every 15 minutes
     scheduler.add_job(run_bot_wrapper, 'interval', minutes=15, args=[api])

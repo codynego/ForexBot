@@ -134,6 +134,7 @@ class Strategy:
         # else:
         #     return 0
         # print(result2)
+        #volatility = calculate_overall_volatility_from_df(dataframes)
  
         if all(result == "BUY" for result in result2):
             return [1, strength, result2]
@@ -154,3 +155,40 @@ class Strategy:
         #     return -1
         # else:
         #     return 0
+
+    import pandas as pd
+import numpy as np
+
+def calculate_volatility_from_df(df):
+    """
+    Calculate volatility (standard deviation of price changes) for a given column (timeframe).
+    
+    :param df: The DataFrame containing the prices for different timeframes.
+    :param column_name: The name of the column representing the prices of the specific timeframe.
+    :return: Volatility as the standard deviation of the price changes.
+    """
+    returns = df['close'].pct_change().dropna()  # Percentage price changes (returns)
+    volatility = np.std(returns) * 100 # Standard deviation of returns (volatility)
+    return volatility
+
+def calculate_overall_volatility_from_df(df, weights=(0.4, 0.3, 0.3)):
+    """
+    Calculate the overall market volatility from the DataFrame containing three different timeframes (M15, M30, H1).
+
+    :param df: The DataFrame containing prices for M15, M30, and H1 timeframes.
+    :param weights: Weights to assign to each timeframe (default: 0.4 for M15, 0.3 for M30, 0.3 for H1).
+    :return: The overall market volatility.
+    """
+    # Ensure the DataFrame contains the required columns
+    # if not all(col in df for col in ['M15', 'M30', 'H1']):
+    #     raise ValueError("DataFrame must contain 'M15', 'M30', and 'H1' columns.")
+    
+    # Calculate volatility for each timeframe
+    m15_volatility = calculate_volatility_from_df(df[0])
+    m30_volatility = calculate_volatility_from_df(df[1])
+    h1_volatility = calculate_volatility_from_df(df[2])
+
+    # Combine the volatilities based on the assigned weights
+    overall_volatility = (weights[0] * m15_volatility) + (weights[1] * m30_volatility) + (weights[2] * h1_volatility)
+    
+    return overall_volatility
