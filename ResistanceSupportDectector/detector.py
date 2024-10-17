@@ -138,33 +138,37 @@ def ma_support_resistance(df, period, tolerance, min_touches=2, recent_window=3)
   # last_ma = df['MA'].iloc[-1]
   # return abs(last_price - last_ma) / last_ma <= tolerance
 
-async def is_price_near_ma(df, tolerance, ma_period):
+async def is_price_near_ma(df, tolerance, breakout_value, ma_period):
     """
-    Checks if the current price is within a tolerance of the MA and determines if the MA is acting as resistance or support.
+    Checks if the current price is within a tolerance of the MA and determines if the MA is acting as resistance or support. If the price breaks out beyond a threshold, the signal is False.
 
     Args:
         df: Pandas DataFrame containing price data with columns 'close' and 'Date'.
         ma_period: Length of the moving average.
         tolerance: Percentage tolerance for considering price near MA.
+        breakout_value: Percentage value for considering a breakout beyond the MA.
 
     Returns:
         'resistance' if the MA is acting as resistance,
         'support' if the MA is acting as support,
+        False if the price breaks out beyond the breakout threshold,
         None if the price is not near the MA.
     """
 
     indicator = Indicator(df)
     df['ma'] = indicator.moving_average(ma_period)
   
-    
     # Get the latest row in the DataFrame
     latest_row = df.iloc[-1]
     price = latest_row['close']  # Assuming 'close' is the column for closing prices
     ma = latest_row['ma']
-    print("ma: ", ma, "price:", price)
     
+    # Check if price is within tolerance of the MA
     if abs(price - ma) / ma <= tolerance:
-        if price > ma:
+        # Check if price breaks out beyond the breakout value
+        if abs(price - ma) / ma > breakout_value:
+            return None  # Breakout detected, return False signal
+        elif price > ma:
             return 'resistance'
         else:
             return 'support'
@@ -172,13 +176,15 @@ async def is_price_near_ma(df, tolerance, ma_period):
         return None
 
 
-async def check_ema(df, tolerance, period=200):
-    """Check if price is near EMA and if it's acting as support or resistance.
+async def check_ema(df, tolerance, breakout_value, period=200):
+    """
+    Check if price is near EMA and if it's acting as support or resistance. If the price breaks out beyond a certain threshold, the signal will be False.
 
     Args:
         df (pd.DataFrame): DataFrame containing price data.
+        tolerance (float): Tolerance for price proximity to EMA.
+        breakout_value (float): Threshold for breakout beyond the EMA.
         period (int, optional): Period for EMA calculation. Defaults to 200.
-        tolerance (float, optional): Tolerance for price proximity to EMA. Defaults to 0.001.
     """
     indicator = Indicator(df)
     df['ema'] = indicator.ema(period)
@@ -189,13 +195,18 @@ async def check_ema(df, tolerance, period=200):
     ema = latest_row['ema']
     print("ema: ", ema, "price:", price,  "tolerance:", price * tolerance)
 
+    # Check if price is within tolerance of the EMA
     if abs(price - ema) / ema <= tolerance:
-        if price > ema:
+        # Check if price breaks out beyond breakout_value
+        if abs(price - ema) / ema > breakout_value:
+            return None  # Breakout detected, return False signal
+        elif price > ema:
             return 'resistance'
         else:
             return 'support'
     else:
-        return None  
+        return None
+
 
 
 
@@ -257,8 +268,8 @@ async def is_price_near_bollinger_band(df, tolerance, period=20, std_dev=2):
   last_price = df['close'].iloc[-1]
   upper_band_value = df['upper_band'].iloc[-1]
   lower_band_value = df['lower_band'].iloc[-1]
-  print("upper_band_value: ", upper_band_value, "price:", last_price, "tolerance:", last_price * tolerance)
-  print("lower_band_value: ", lower_band_value, "price:", last_price, "tolerance:", last_price * tolerance)
+  # print("upper_band_value: ", upper_band_value, "price:", last_price, "tolerance:", last_price * tolerance)
+  # print("lower_band_value: ", lower_band_value, "price:", last_price, "tolerance:", last_price * tolerance)
 
   if abs(last_price - upper_band_value) <= tolerance * upper_band_value:
     return 'upper_band'
