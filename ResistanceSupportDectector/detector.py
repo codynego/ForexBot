@@ -161,6 +161,7 @@ async def is_price_near_ma(df, tolerance, ma_period):
     latest_row = df.iloc[-1]
     price = latest_row['close']  # Assuming 'close' is the column for closing prices
     ma = latest_row['ma']
+    print("ma: ", ma, "price:", price)
     
     if abs(price - ma) / ma <= tolerance:
         if price > ma:
@@ -186,7 +187,8 @@ async def check_ema(df, tolerance, period=200):
     latest_row = df.iloc[-1]
     price = latest_row['close']  # Assuming 'close' is the column for closing prices
     ema = latest_row['ema']
-    
+    print("ema: ", ema, "price:", price,  "tolerance:", price * tolerance)
+
     if abs(price - ema) / ema <= tolerance:
         if price > ema:
             return 'resistance'
@@ -255,6 +257,8 @@ async def is_price_near_bollinger_band(df, tolerance, period=20, std_dev=2):
   last_price = df['close'].iloc[-1]
   upper_band_value = df['upper_band'].iloc[-1]
   lower_band_value = df['lower_band'].iloc[-1]
+  print("upper_band_value: ", upper_band_value, "price:", last_price, "tolerance:", last_price * tolerance)
+  print("lower_band_value: ", lower_band_value, "price:", last_price, "tolerance:", last_price * tolerance)
 
   if abs(last_price - upper_band_value) <= tolerance * upper_band_value:
     return 'upper_band'

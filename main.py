@@ -30,10 +30,10 @@ async def run_bot(api) -> None:
             if signal is None or signal["type"] == "HOLD":
                 continue
 
-            #Skip unwanted signals based on market type
-            if (signal['symbol'].startswith("BOOM") and "SELL" in signal["type"]) or \
-               (signal['symbol'].startswith("CRASH") and "BUY" in signal["type"]):
-                continue
+            # #Skip unwanted signals based on market type
+            # if (signal['symbol'].startswith("BOOM") and "SELL" in signal["type"]) or \
+            #    (signal['symbol'].startswith("CRASH") and "BUY" in signal["type"]):
+            #     continue
 
             # Send signal to Telegram
             print(bot.signal_toString(signal))
@@ -47,18 +47,23 @@ async def run_bot(api) -> None:
 
 async def ping_api(api):
     try:
-        await api.ping({"ping": 1})
+        response = await api.ping({"ping": 1})
+        if response['ping']:
+            print(response['ping'])
     except Exception as e:
+        response = await api.ping({"ping": 1})
+        print(response['ping'])
         logging.error("Ping failed: %s", str(e))
         await reconnect()
 
 
 async def reconnect():
     retry_attempts = 0
-    max_retries = 5  # Retry connection up to 5 times
+    max_retries = 5
     connect, api = await bot.connect_deriv(app_id="1089")
-    
-    while not connect and retry_attempts < max_retries:
+    response = await api.ping({"ping": 1})
+
+    while not response['ping'] and retry_attempts < max_retries:
         print(f"Retrying to connect... attempt {retry_attempts + 1}")
         await asyncio.sleep(3)
         retry_attempts += 1
@@ -82,6 +87,10 @@ async def run_bot_wrapper(api):
 
 async def main():
     connect, api = await bot.connect_deriv(app_id="1089")
+    response = await api.ping({"ping": 1})
+    if response['ping']:
+        print(response)
+
     try_count = 0
 
     # Retry connecting if failed initially
