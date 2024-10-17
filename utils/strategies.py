@@ -55,8 +55,8 @@ class Strategy:
 
         ma48_period = 48
         #ma48_behavior = await is_support_resistance(df, 48)
-        price_near_ma48 = await is_price_near_ma(df,tolerance, ma_period=48)
-        price_near_ma10 = await is_price_near_ma(df,tolerance, ma_period=10)
+        price_near_ma48 = await is_price_near_ma(df,tolerance, breakout_threshold, ma_period=48)
+        price_near_ma10 = await is_price_near_ma(df,tolerance, breakout_threshold, ma_period=10)
         breakout_48 = df['close'].iloc[-1] > ma48.iloc[-1] * (1 + breakout_threshold)
 
         # check bolling band behavior
@@ -65,7 +65,7 @@ class Strategy:
         price_near_bb = await is_price_near_bollinger_band(df, tolerance=tolerance)
         #breakout_48 = df['close'].iloc[-1] > ma48.iloc[-1] * (1 + breakout_threshold)
 
-        ema_behaviour = await check_ema(df, period=200, tolerance=tolerance)
+        ema_behaviour = await check_ema(df, period=200, tolerance=tolerance,  breakout_value=breakout_threshold)
 
 
         buy_conditions = [
