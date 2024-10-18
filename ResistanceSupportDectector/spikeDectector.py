@@ -1,20 +1,31 @@
 import pandas as pd
-import numpy as np
 
-def detect_spikes(df, spike_threshold=2):
-  """
-  Detects price spikes in a DataFrame.
+async def detect_spikes(df, threshold=0.02, lookback=5):
+    """
+    Detects spikes in price data based on percentage changes and recent volatility.
 
-  Args:
-    df: Pandas DataFrame with a 'close' column.
-    spike_threshold: Number of standard deviations for a spike.
+    Args:
+        df: Pandas DataFrame containing price data with 'Close' and 'Date' columns.
+        threshold: Percentage threshold for detecting spikes (e.g., 2%).
+        lookback: Number of periods to look back for calculating average price.
 
-  Returns:
-    A DataFrame with a 'spike' column indicating whether a spike occurred.
-  """
+    Returns:
+        A string indicating the type of spike detected: "spike_up", "spike_down", or "no_spike".
+    """
+    # Calculate percentage changes
+    df['pct_change'] = df['close'].pct_change()
+    
+    # Calculate recent average price for comparison
+    recent_avg_price = df['close'].rolling(window=lookback).mean().shift(1)
 
-  df['price_change'] = df['close'].diff()
-  df['std'] = df['price_change'].rolling(window=20).std()
-  df['spike'] = abs(df['price_change']) > spike_threshold * df['std']
+    # Check for spikes
+    last_pct_change = df['pct_change'].iloc[-1]
+    last_price = df['close'].iloc[-1]
 
-  return df[df['spike'] == True]
+    # Determine spike conditions
+    if last_pct_change > threshold:
+        return "spike_up"
+    elif last_pct_change < -threshold:
+        return "spike_down"
+    else:
+        return "no_spike"

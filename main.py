@@ -30,10 +30,10 @@ async def run_bot(api) -> None:
             if signal is None or signal["type"] == "HOLD":
                 continue
 
-            # #Skip unwanted signals based on market type
-            # if (signal['symbol'].startswith("BOOM") and "SELL" in signal["type"]) or \
-            #    (signal['symbol'].startswith("CRASH") and "BUY" in signal["type"]):
-            #     continue
+            #Skip unwanted signals based on market type
+            if (signal['symbol'].startswith("BOOM") and "SELL" in signal["type"]) or \
+               (signal['symbol'].startswith("CRASH") and "BUY" in signal["type"]):
+                continue
 
             # Send signal to Telegram
             print(bot.signal_toString(signal))
@@ -113,7 +113,7 @@ async def main():
     scheduler.add_job(ping_api, 'interval', minutes=1, args=[api])
     
     # Schedule bot to run every 15 minutes
-    scheduler.add_job(run_bot_wrapper, 'interval', minutes=15, args=[api])
+    scheduler.add_job(run_bot_wrapper, 'interval', minutes=30, args=[api])
     
     scheduler.start()
 
