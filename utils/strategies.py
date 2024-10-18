@@ -1,195 +1,164 @@
 from utils.indicators import Indicator
-#from ResistanceSupportDectector.detector import generate_buy_signal
-from ResistanceSupportDectector.detector import ma_support_resistance, check_ema, is_support_resistance, is_bollinger_band_support_resistance, is_price_near_bollinger_band, is_price_near_ma
+from ResistanceSupportDectector.detector import (
+    ma_support_resistance, check_ema, is_support_resistance, 
+    is_bollinger_band_support_resistance, is_price_near_bollinger_band, 
+    is_price_near_ma
+)
 import asyncio
 from ResistanceSupportDectector.spikeDectector import detect_spikes
 from ResistanceSupportDectector.aiStartegy import MyStrategy, combine_timeframe_signals
 
 class Strategy:
-    @classmethod
-    # def rsiStrategy(cls, data):
-    #     if generate_buy_signal(data):
-    #         return -1
-    #     else:
-    #         return 1
-    #     # indicator = Indicator(data)
-    #     # rsi = indicator.rsi(14)
-    #     # ma = indicator.moving_average(10)
-    #     # print('moving average',ma.tail(1))
-    #     # rsi_value = rsi.tail(1).values[0]
-    #     # #print(data['close'].tail(1))
-    #     # if rsi_value > 30:
-    #     #     return 1
-    #     # elif rsi_value < 30:
-    #     #     return -1
-    #     # return 0
-
 
     @classmethod
-    async def runStrategy(cls, df, tolerance, breakout_threshold=0.025):
+    async def runStrategy(cls, df, tolerance, breakout_threshold=0.0035):
         """
-        Generates a buy signal based on MA10 behavior and price proximity.
+        Generates a buy or sell signal based on various indicators like MA10, MA48, EMA, and Bollinger Bands.
+        Prioritizes signals in case of conflicts and checks for breakouts.
 
         Args:
             df: Pandas DataFrame containing price data with columns 'Close' and 'Date'.
-            ma_period: Length of the moving average.
-            tolerance: Percentage tolerance for considering price near MA.
-            breakout_threshold: Percentage threshold for price breakout.
+            tolerance: Percentage tolerance for considering price near key indicators.
+            breakout_threshold: Percentage threshold for price breakout beyond an indicator.
 
         Returns:
-            True if a buy signal is generated, False otherwise.
+            "BUY", "SELL", or "HOLD" based on the signal evaluation.
         """
-        #spikes = detect_spikes(df)
-        # print(len(spikes))
         indicator = Indicator(df)
-        ma48 = indicator.moving_average(48)
-        # check m0ving average 10 behavior
-        # ma10_behavior = await is_support_resistance(df, ma_period)
-        #price_near_ma10 = await is_price_near_ma(df, ma_period, tolerance)
-        # breakout_10 = df['close'].iloc[-1] > ma48.iloc[-1] * (1 + breakout_threshold)
 
-        ma10_behavior = await is_support_resistance(df, 10)
-        ma48_behavior = await is_support_resistance(df, 48)
+        # Fetch indicators
+        # ma10 = indicator.moving_average(10)
+        # ma48 = indicator.moving_average(48)
 
-        # check moving average 48 behavior
-
-        ma48_period = 48
-        #ma48_behavior = await is_support_resistance(df, 48)
-        price_near_ma48 = await is_price_near_ma(df,tolerance, breakout_threshold, ma_period=48)
-        price_near_ma10 = await is_price_near_ma(df,tolerance, breakout_threshold, ma_period=10)
-        breakout_48 = df['close'].iloc[-1] > ma48.iloc[-1] * (1 + breakout_threshold)
-
-        # check bolling band behavior
-        #ma48_period = 48
+        # Get conditions for moving averages, EMA, and Bollinger Bands
+        # ma10_behavior = await is_support_resistance(df, 10)
+        # ma48_behavior = await is_support_resistance(df, 48)
+        ema_behavior = await check_ema(df, period=200, tolerance=tolerance, breakout_value=breakout_threshold)
         bb_behavior = await is_bollinger_band_support_resistance(df)
         price_near_bb = await is_price_near_bollinger_band(df, tolerance=tolerance)
+
+        # Additional checks for proximity to MAs with breakout consideration
+        price_near_ma48 = await is_price_near_ma(df, tolerance, breakout_threshold, ma_period=48)
+        price_near_ma10 = await is_price_near_ma(df, tolerance, breakout_threshold, ma_period=10)
         #breakout_48 = df['close'].iloc[-1] > ma48.iloc[-1] * (1 + breakout_threshold)
 
-        ema_behaviour = await check_ema(df, period=200, tolerance=tolerance,  breakout_value=breakout_threshold)
-
-
+        # Define buy and sell conditions
         buy_conditions = [
             price_near_ma10 == 'support',
             price_near_ma48 == 'support',
-            ema_behaviour == 'support',
+            ema_behavior == 'support',
             bb_behavior == 'support' and price_near_bb == 'lower_band'
-        
         ]
-        #print("buy  conditions: ", buy_conditions)
-
-    
-        #print("buy_condition", buy_conditions)
         sell_conditions = [
             price_near_ma10 == 'resistance',
             price_near_ma48 == 'resistance',
-            ema_behaviour == 'resistance',
+            ema_behavior == 'resistance',
             bb_behavior == 'resistance' and price_near_bb == 'upper_band'
         ]
-        # print("sell _condition", sell_conditions)
-        # print("=========================================")
-        
-        if any(buy_conditions):
+
+        # Priority-based logic to handle mixed signals more effectively
+        #print(f"Buy Conditions: {buy_conditions}, Sell Conditions: {sell_conditions}")
+        buy_count = buy_conditions.count(True)
+        sell_count = sell_conditions.count(True)
+
+        # Decision making based on buy and sell condition count
+        if buy_count > sell_count:
+            #print("Buy signal stronger based on conditions.")
             return "BUY"
-        
-        elif any(sell_conditions):
+        elif sell_count > buy_count:
+            #print("Sell signal stronger based on conditions.")
             return "SELL"
         else:
+            #print("No clear signal, holding position.")
             return "HOLD"
-    
-
-        
 
     @classmethod
-    async def process_multiple_timeframes(cls, dataframes, ma_period=10, tolerance=0.0045, breakout_threshold=0.015, std_dev=2):
+    async def process_multiple_timeframes(cls, dataframes, ma_period=10, tolerance=0.007, breakout_threshold=0.005, std_dev=2):
         """
-        Processes multiple timeframes to generate a buy or sell signal.
+        Processes multiple timeframes to generate a combined buy or sell signal. 
+        Adjusts tolerance dynamically based on volatility from different timeframes.
 
         Args:
-            dataframes: A list of pandas DataFrames, one for each timeframe.
+            dataframes: A list of pandas DataFrames for different timeframes (e.g., M15, M30, H1).
             ma_period: Length of the short-term moving average.
-            tolerance: Percentage tolerance for considering price near MA.
-            breakout_threshold: Percentage threshold for price breakout.
-            std_dev: Number of standard deviations for Bollinger Bands.
+            tolerance: Percentage tolerance for price proximity to indicators.
+            breakout_threshold: Threshold for breakout detection.
+            std_dev: Standard deviation for Bollinger Bands.
 
         Returns:
-            "BUY", "SELL", or "HOLD" based on the combined signals from all timeframes.
+            A tuple containing the final signal ("BUY", "SELL", or "HOLD"), the overall signal strength, and detailed signals from each timeframe.
         """
-        
         overall_volatility = calculate_overall_volatility_from_df(dataframes)
-        tolerance = tolerance * (1 + overall_volatility)
-        #print("tolerance",  tolerance, "overall_volatility", overall_volatility)
+        tolerance_adjusted = tolerance * (1 + overall_volatility)
+
+        #print(f"Adjusted tolerance based on overall volatility: {tolerance_adjusted}, {overall_volatility}")
+
+        # tasks = []
+        # for df in dataframes:
+        #     strategy_instance = MyStrategy(df)
+        #     tasks.append(asyncio.create_task(cls.runStrategy(df, tolerance_adjusted, breakout_threshold)))
+        
+        # result_signals = await asyncio.gather(*tasks)
+        # combined_strength, combined_signal = await combine_timeframe_signals(result_signals)
+
+        #print(f"Timeframe Results: {result_signals}, Combined Strength: {combined_strength}")
 
         tasks = []
         task2 = []
         for df in dataframes:
             startegy = MyStrategy(df)
-            task2.append(asyncio.create_task(cls.runStrategy(df, float(tolerance), breakout_threshold)))
+            task2.append(asyncio.create_task(cls.runStrategy(df, float(tolerance_adjusted), breakout_threshold)))
             tasks.append(asyncio.create_task(startegy.run()))
 
-        result2 = await asyncio.gather(*task2) # type: ignore
+        result_signals = await asyncio.gather(*task2) # type: ignore
         results = await asyncio.gather(*tasks)
+
         strength, signal = await combine_timeframe_signals(results)
-                #Check if all signals are the same
-        # if all(result == "BUY" for result in results):
-        #     return 1
-        # elif all(result == "SELL" for result in results):
-        #     return -1
-        # else:
-        #     return 0
-        # print(result2)
-        if all(result == "BUY" for result in result2):
-            return [1, strength, result2]
-        elif all(result == "SELL" for result in result2):
-            return [-1, strength, result2]
-        elif result2[0] == "BUY" and result2[1] == "BUY":
-            return [1, strength, result2]
-        elif result2[0] == "SELL" and result2[1] == "SELL":
-            return [0, strength, result2]
+
+        if all(signal == "BUY" for signal in result_signals):
+            return [1, strength, result_signals]
+        elif all(signal == "SELL" for signal in result_signals):
+            return [0, strength, result_signals]
+        elif result_signals.count("BUY") > result_signals.count("SELL"):
+            return [1, strength, result_signals]
+        elif result_signals.count("SELL") > result_signals.count("BUY"):
+            return [0, strength, result_signals]
         else:
-            return [-1, strength, result2]
-        
+            return [1, strength, result_signals]  # Hold when signals are mixed
 
-        # Check if all signals are the same
-        # if all(result == "BUY" for result in results):
-        #     return 1
-        # elif all(result == "SELL" for result in results):
-        #     return -1
-        # else:
-        #     return 0
-
-    import pandas as pd
+# Utility functions for volatility calculations
+import pandas as pd
 import numpy as np
 
 def calculate_volatility_from_df(df):
     """
-    Calculate volatility (standard deviation of price changes) for a given column (timeframe).
+    Calculate volatility (standard deviation of percentage price changes).
     
-    :param df: The DataFrame containing the prices for different timeframes.
-    :param column_name: The name of the column representing the prices of the specific timeframe.
-    :return: Volatility as the standard deviation of the price changes.
+    Args:
+        df: DataFrame containing price data.
+    
+    Returns:
+        Volatility as a percentage.
     """
-    returns = df['close'].pct_change().dropna()  # Percentage price changes (returns)
-    volatility = np.std(returns) * 100 # Standard deviation of returns (volatility)
+    returns = df['close'].pct_change().dropna()
+    volatility = np.std(returns) * 100
     return volatility
 
-def calculate_overall_volatility_from_df(df, weights=(0.4, 0.3, 0.3)):
+def calculate_overall_volatility_from_df(dataframes, weights=(0.4, 0.3, 0.3)):
     """
-    Calculate the overall market volatility from the DataFrame containing three different timeframes (M15, M30, H1).
-
-    :param df: The DataFrame containing prices for M15, M30, and H1 timeframes.
-    :param weights: Weights to assign to each timeframe (default: 0.4 for M15, 0.3 for M30, 0.3 for H1).
-    :return: The overall market volatility.
-    """
-    # Ensure the DataFrame contains the required columns
-    # if not all(col in df for col in ['M15', 'M30', 'H1']):
-    #     raise ValueError("DataFrame must contain 'M15', 'M30', and 'H1' columns.")
+    Calculate weighted overall volatility based on multiple timeframes.
     
-    # Calculate volatility for each timeframe
-    m15_volatility = calculate_volatility_from_df(df[0])
-    m30_volatility = calculate_volatility_from_df(df[1])
-    h1_volatility = calculate_volatility_from_df(df[2])
+    Args:
+        dataframes: List of DataFrames, each representing a different timeframe.
+        weights: Weights to assign to each timeframe.
+    
+    Returns:
+        The weighted overall market volatility.
+    """
 
-    # Combine the volatilities based on the assigned weights
+    m15_volatility = calculate_volatility_from_df(dataframes[0])
+    m30_volatility = calculate_volatility_from_df(dataframes[1])
+    h1_volatility = calculate_volatility_from_df(dataframes[2])
+
     overall_volatility = (weights[0] * m15_volatility) + (weights[1] * m30_volatility) + (weights[2] * h1_volatility)
-    
     return overall_volatility

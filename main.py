@@ -38,11 +38,11 @@ async def run_bot(api) -> None:
             # Send signal to Telegram
             print(bot.signal_toString(signal))
             print("=============================")
-            await send_telegram_message(Config.TELEGRAM_BOT_TOKEN, Config.TELEGRAM_CHANNEL_ID, bot.signal_toString(signal))
+            #await send_telegram_message(Config.TELEGRAM_BOT_TOKEN, Config.TELEGRAM_CHANNEL_ID, bot.signal_toString(signal))
             logging.info("Signal: %s", bot.signal_toString(signal))
-            
     except Exception as e:
-        logging.error("Error in run_bot: %s", str(e))
+        logging.error("Run bot failed: %s", str(e))
+
 
 
 async def ping_api(api):
@@ -63,7 +63,7 @@ async def reconnect():
     connect, api = await bot.connect_deriv(app_id="1089")
     response = await api.ping({"ping": 1})
 
-    while not response['ping'] and retry_attempts < max_retries:
+    while not response['ping'] or retry_attempts < max_retries or not connect:
         print(f"Retrying to connect... attempt {retry_attempts + 1}")
         await asyncio.sleep(3)
         retry_attempts += 1
@@ -94,7 +94,7 @@ async def main():
     try_count = 0
 
     # Retry connecting if failed initially
-    while not connect:
+    while not connect or not response['ping']:
         if try_count >= Config.CONNECTION_TIMEOUT:
             print("Failed to connect! Exceeded retry attempts.")
             raise Exception("Bot not initialized")
@@ -113,7 +113,7 @@ async def main():
     scheduler.add_job(ping_api, 'interval', minutes=1, args=[api])
     
     # Schedule bot to run every 15 minutes
-    scheduler.add_job(run_bot_wrapper, 'interval', minutes=15, args=[api])
+    scheduler.add_job(run_bot_wrapper, 'interval', minutes=1, args=[api])
     
     scheduler.start()
 

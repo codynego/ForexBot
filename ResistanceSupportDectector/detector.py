@@ -166,9 +166,9 @@ async def is_price_near_ma(df, tolerance, breakout_value, ma_period):
     # Check if price is within tolerance of the MA
     if abs(price - ma) / ma <= tolerance:
         # Check if price breaks out beyond the breakout value
-        if abs(price - ma) / ma > breakout_value:
-            return None  # Breakout detected, return False signal
-        elif price > ma:
+        # if abs(price - ma) / ma > breakout_value:
+        #     return None  # Breakout detected, return False signal
+        if price > ma:
             return 'resistance'
         else:
             return 'support'
@@ -193,14 +193,14 @@ async def check_ema(df, tolerance, breakout_value, period=200):
     latest_row = df.iloc[-1]
     price = latest_row['close']  # Assuming 'close' is the column for closing prices
     ema = latest_row['ema']
-    print("ema: ", ema, "price:", price,  "tolerance:", price * tolerance)
+    #print("ema: ", ema, "price:", price,  "tolerance:", price * tolerance)
 
     # Check if price is within tolerance of the EMA
     if abs(price - ema) / ema <= tolerance:
         # Check if price breaks out beyond breakout_value
-        if abs(price - ema) / ema > breakout_value:
-            return None  # Breakout detected, return False signal
-        elif price > ema:
+        # if abs(price - ema) / ema > breakout_value:
+        #     return None 
+        if price > ema:
             return 'resistance'
         else:
             return 'support'
