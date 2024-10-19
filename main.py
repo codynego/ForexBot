@@ -32,9 +32,9 @@ async def run_bot(api) -> None:
 
             
             # #Skip unwanted signals based on market type
-            if signal['symbol'].startswith("BOOM") and signal["type"][0] == "SELL" and signal["type"][1] == "SELL":
+            if signal['symbol'].startswith("BOOM") and signal["type"].count("SELL") > 1:
                 continue
-            elif signal['symbol'].startswith("CRASH") and signal["type"][0] == "BUY" and signal["type"][1] == "BUY":
+            elif signal['symbol'].startswith("CRASH") and signal["type"].count("BUY") > 1:
                 continue
 
             # Send signal to Telegram
