@@ -30,16 +30,18 @@ async def run_bot(api) -> None:
             if signal is None or signal["type"] == "HOLD":
                 continue
 
-            #Skip unwanted signals based on market type
-            if (signal['symbol'].startswith("BOOM") and (signal["type"][0] == "SEll" and signal["type"][1] == "SEll")) or \
-               (signal['symbol'].startswith("CRASH") and (signal["type"][0] == "BUY" and signal["type"][1] == "BUY")):
+            
+            # #Skip unwanted signals based on market type
+            if signal['symbol'].startswith("BOOM") and signal["type"][0] == "SELL":
+                continue
+            elif signal['symbol'].startswith("CRASH") and signal["type"][0] == "BUY":
                 continue
 
             # Send signal to Telegram
-            #print(bot.signal_toString(signal))
+            print(bot.signal_toString(signal))
             print("=============================")
             await send_telegram_message(Config.TELEGRAM_BOT_TOKEN, Config.TELEGRAM_CHANNEL_ID, bot.signal_toString(signal))
-            logging.info("Signal: %s", bot.signal_toString(signal))
+            #logging.info("Signal: %s", bot.signal_toString(signal))
     except Exception as e:
         logging.error("Run bot failed: %s", str(e))
 
