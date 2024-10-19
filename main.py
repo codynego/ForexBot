@@ -31,12 +31,12 @@ async def run_bot(api) -> None:
                 continue
 
             #Skip unwanted signals based on market type
-            if (signal['symbol'].startswith("BOOM") and "SELL" in signal["type"]) or \
-               (signal['symbol'].startswith("CRASH") and "BUY" in signal["type"]):
+            if (signal['symbol'].startswith("BOOM") and (signal["type"][0] == "SEll" and signal["type"][1] == "SEll")) or \
+               (signal['symbol'].startswith("CRASH") and (signal["type"][0] == "BUY" and signal["type"][1] == "BUY")):
                 continue
 
             # Send signal to Telegram
-            print(bot.signal_toString(signal))
+            #print(bot.signal_toString(signal))
             print("=============================")
             await send_telegram_message(Config.TELEGRAM_BOT_TOKEN, Config.TELEGRAM_CHANNEL_ID, bot.signal_toString(signal))
             logging.info("Signal: %s", bot.signal_toString(signal))
@@ -51,10 +51,14 @@ async def ping_api(api):
         if response['ping']:
             print(response['ping'])
     except Exception as e:
-        response = await api.ping({"ping": 1})
-        print(response['ping'])
-        logging.error("Ping failed: %s", str(e))
-        await reconnect()
+        logging.error("Ping failed: %s. Attempting to reconnect...", str(e))
+        connect, api = await reconnect()  # type: ignore # Trigger reconnection on failure
+        if connect:
+            logging.info("Reconnected successfully after ping failure.")
+            await ping_api(api)  # Retry ping after reconnecting
+        else:
+            logging.error("Reconnection failed after ping failure.")
+
 
 
 async def reconnect():
@@ -113,7 +117,7 @@ async def main():
     scheduler.add_job(ping_api, 'interval', minutes=1, args=[api])
     
     # Schedule bot to run every 15 minutes
-    scheduler.add_job(run_bot_wrapper, 'interval', minutes=30, args=[api])
+    scheduler.add_job(run_bot_wrapper, 'interval', minutes=15, args=[api])
     
     scheduler.start()
 
