@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-+1sek+kxku)7f-c+-hs^ankge7x%=9wsvlq3b7ge&kmo1edxwi
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['forexbot-1.onrender.com', 'https://gigantic-darsey-codynego-84fef88b.koyeb.app/']
+ALLOWED_HOSTS = ['forexbot-1.onrender.com','10.4.1.209', 'https://gigantic-darsey-codynego-84fef88b.koyeb.app']
 
 
 # Application definition
