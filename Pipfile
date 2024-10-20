@@ -21,6 +21,7 @@ pytz = "==2024.1"
 python-dotenv = "*"
 apscheduler = "*"
 joblib = "*"
+scikit-learn = "*"
 
 [dev-packages]
 
