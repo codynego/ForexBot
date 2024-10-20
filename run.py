@@ -17,7 +17,7 @@ else:
     print("main.py failed to start")
 
 # Run manage.py runserver in the foreground and print output to console
-subprocess.run(['python', 'manage.py', 'runserver', '0.0.0.0:8003'], stdout=None, stderr=None)
+subprocess.run(['python', 'manage.py', 'runserver', '0.0.0.0:8000'], stdout=None, stderr=None)
 
 # Optionally, handle cleanup if needed
 main_process.terminate()
