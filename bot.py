@@ -110,7 +110,7 @@ class TradingBot:
 
         if strategy == "rsistrategy":
             # stra = Strategy.rsiStrategy(data)
-            result = await Strategy.process_multiple_timeframes(data)
+            result = await Strategy.process_multiple_timeframes(data, symbol)
             if result is None:
                 return None
             stra, strength, all_signals = result

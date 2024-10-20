@@ -177,7 +177,7 @@ from ResistanceSupportDectector.detector import (
 import asyncio
 from ResistanceSupportDectector.spikeDectector import detect_spikes
 from ResistanceSupportDectector.aiStartegy import MyStrategy, combine_timeframe_signals
-
+import pandas_ta as ta
 class Strategy:
 
     @classmethod
@@ -242,7 +242,7 @@ class Strategy:
         return "HOLD"
 
     @classmethod
-    async def process_multiple_timeframes(cls, dataframes, ma_period=10, tolerance=0.005, breakout_threshold=0.0035, std_dev=2):
+    async def process_multiple_timeframes(cls, dataframes, symbol, ma_period=10, tolerance=0.003, breakout_threshold=0.0035, std_dev=2):
         """
         Processes multiple timeframes to generate a combined buy or sell signal. 
         Adjusts tolerance dynamically based on volatility and catches spikes across different timeframes.
@@ -259,13 +259,35 @@ class Strategy:
         """
         overall_volatility = calculate_overall_volatility_from_df(dataframes)
         tolerance_adjusted = tolerance * (1 + overall_volatility)
+        features = calculate_features(dataframes[0], dataframes[1], dataframes[2])
+        # path = 'C:/Users/Admin/codynego/mlforfinance/forexBot/Boom500_rf.pkl'
+        
+        model_paths = {
+            "BOOM1000": 'models/Boom1000_rf.pkl',
+            "BOOM500": 'models/Boom500_rf.pkl',
+            "CRASH500": 'models/Crash500_rf.pkl',
+            "CRASH1000": 'models/Crash1000_rf.pkl',
+        }
+
+
+        if symbol not in model_paths:
+            print("Invalid symbol")
+            return None
+
+        path = model_paths[symbol]
+
+        # load model using joblib
+        model = joblib.load(path)
+        ai_tolerance = model.predict(features)[0]
+        #print(ai_tolerance)
 
         tasks = []
         task2 = []
-        for df in dataframes:
+        for df, tol in zip(dataframes, ai_tolerance):
             strategy = MyStrategy(df)
-            task2.append(asyncio.create_task(cls.runStrategy(df, float(tolerance_adjusted), breakout_threshold)))
+            task2.append(asyncio.create_task(cls.runStrategy(df, float(tol), breakout_threshold)))
             tasks.append(asyncio.create_task(strategy.run()))
+            #print("new timeframes: ==============================================")
 
         result_signals = await asyncio.gather(*task2)  # Signals from runStrategy
         results = await asyncio.gather(*tasks)  # Signals from MyStrategy.run()
@@ -320,6 +342,7 @@ def calculate_volatility_from_df(df):
     returns = df['close'].pct_change().dropna()
     volatility = np.std(returns) * 100
     return volatility
+import joblib
 
 def calculate_overall_volatility_from_df(dataframes, weights=(0.4, 0.3, 0.3)):
     """
@@ -338,3 +361,51 @@ def calculate_overall_volatility_from_df(dataframes, weights=(0.4, 0.3, 0.3)):
 
     overall_volatility = (weights[0] * m15_volatility) + (weights[1] * m30_volatility) + (weights[2] * h1_volatility)
     return overall_volatility
+
+
+
+import pandas as pd
+
+def calculate_features(m5_data, m15_data, h1_data):
+
+    # Calculate indicators for M5 timeframe
+    m5_data['close_m5'] = m5_data['close']
+    m5_data['MA10_m5'] = ta.sma(m5_data['close'], length=10)
+    m5_data['MA48_m5'] = ta.sma(m5_data['close'], length=48)
+    m5_data['EMA200_m5'] = ta.ema(m5_data['close'], length=200)
+    m5_data[['BB_Low_m5', 'BB_Mid_m5', 'BB_High_m5' ]] = ta.bbands(m5_data['close'], length=20, std=2).iloc[:, :3]
+
+
+    # Calculate indicators for M15 timeframe
+    m15_data['close_m15'] = m15_data['close']
+    m15_data['MA10_m15'] = ta.sma(m15_data['close'], length=10)
+    m15_data['MA48_m15'] = ta.sma(m15_data['close'], length=48)
+    m15_data['EMA200_m15'] = ta.ema(m15_data['close'], length=200)
+    m15_data[['BB_Low_m15','BB_Mid_m15', 'BB_High_m15']] = ta.bbands(m15_data['close'], length=20, std=2).iloc[:, :3]
+
+    # Calculate indicators for H1 timeframe
+    h1_data['close_h1'] = h1_data['close']
+    h1_data['MA10_h1'] = ta.sma(h1_data['close'], length=10)
+    h1_data['MA48_h1'] = ta.sma(h1_data['close'], length=48)
+    h1_data['EMA200_h1'] = ta.ema(h1_data['close'], length=200)
+    h1_data[['BB_High_h1', 'BB_Mid_h1', 'BB_Low_h1']]= ta.bbands(h1_data['close'], length=20).iloc[:, :3]
+
+    # Calculate timeframe tolerances (this can be adjusted depending on how you calculate tolerance)
+    m5_data['Timeframe_Tolerance_M5'] = abs(m5_data['close'] - m5_data['MA10_m5']) / m5_data['MA10_m5'] * 100
+    m15_data['Timeframe_Tolerance_M15'] = abs(m15_data['close'] - m15_data['MA10_m15']) / m15_data['MA10_m15'] * 100
+    h1_data['Timeframe_Tolerance_h1'] = abs(h1_data['close'] - h1_data['MA10_h1']) / h1_data['MA10_h1'] * 100
+
+    # Merge dataframes on index
+    combined_data = pd.concat([m5_data, m15_data, h1_data], axis=1, join='inner')
+
+    # Select relevant features
+    features = combined_data[['close_m5', 'close_m15', 'close_h1', 'MA10_m5',
+                             'MA48_m5', 'EMA200_m5', 'BB_High_m5', 'BB_Low_m5',
+                             'MA10_m15', 'MA48_m15', 'EMA200_m15', 'BB_High_m15', 'BB_Low_m15',
+                             'MA10_h1', 'MA48_h1', 'EMA200_h1', 'BB_High_h1', 'BB_Low_h1',
+                             'Timeframe_Tolerance_M5', 'Timeframe_Tolerance_M15', 'Timeframe_Tolerance_h1']]
+
+    return features.tail(1)
+
+
+

@@ -3,6 +3,7 @@ import numpy as np
 from utils import indicators
 from utils.indicators import Indicator
 import asyncio
+import pandas_ta as ta
 
 async def is_support_resistance(df, ma_period=10):
     """
@@ -109,11 +110,12 @@ async def is_price_near_ma(df, tolerance, breakout_value, ma_period):
     latest_row = df.iloc[-1]
     price = latest_row['close']
     ma = latest_row['ma']
+    # dist = distance_to_indicator(price, ma)
+    # print("distance to moving average :", dist)
+    # #print("=======================================")
 
     if abs(price - ma) / ma <= tolerance:
-        if abs(price - ma) / ma > breakout_value:
-            return None
-        elif price > ma:
+        if price > ma:
             return 'resistance'
         else:
             return 'support'
@@ -136,11 +138,12 @@ async def check_ema(df, tolerance, breakout_value, period=200):
     latest_row = df.iloc[-1]
     price = latest_row['close']
     ema = latest_row['ema']
+    # dist = distance_to_indicator(price, ema)
+    # print("distance to ema :", dist)
+    # #print("=======================================")
 
     if abs(price - ema) / ema <= tolerance:
-        if abs(price - ema) / ema > breakout_value:
-            return None
-        elif price > ema:
+        if price > ema:
             return 'resistance'
         else:
             return 'support'
@@ -158,14 +161,15 @@ async def is_bollinger_band_support_resistance(df, period=20, std_dev=2):
     Returns:
         'support', 'resistance', or 'neutral'.
     """
-    df['MA'] = df['close'].rolling(window=period).mean().dropna()
-    df['std'] = df['close'].rolling(window=period).std().dropna()
-    df['upper_band'] = df['MA'] + (df['std'] * std_dev)
-    df['lower_band'] = df['MA'] - (df['std'] * std_dev)
+    bbands = ta.bbands(df['close'], length=20, std=2)
+    if bbands is not None:
+        df[['BB_Low','BB_Mid', 'BB_High']] = bbands.iloc[:, :3]
+    else:
+        raise ValueError("Failed to compute Bollinger Bands.")
 
-    if df['close'].iloc[-1] <= df['lower_band'].iloc[-1] and df['close'].iloc[-2] > df['lower_band'].iloc[-2]:
+    if df['close'].iloc[-1] <= df['BB_Low'].iloc[-1] and df['close'].iloc[-2] > df['BB_Low'].iloc[-2]:
         return 'support'
-    elif df['close'].iloc[-1] >= df['upper_band'].iloc[-1] and df['close'].iloc[-2] < df['upper_band'].iloc[-2]:
+    elif df['close'].iloc[-1] >= df['BB_High'].iloc[-1] and df['close'].iloc[-2] < df['BB_High'].iloc[-2]:
         return 'resistance'
     else:
         return 'neutral'
@@ -182,14 +186,23 @@ async def is_price_near_bollinger_band(df, tolerance, period=20, std_dev=2):
     Returns:
         'upper_band', 'lower_band', or 'neutral'.
     """
-    df['MA'] = df['close'].rolling(window=period).mean().dropna()
-    df['std'] = df['close'].rolling(window=period).std().dropna()
-    df['upper_band'] = df['MA'] + (df['std'] * std_dev)
-    df['lower_band'] = df['MA'] - (df['std'] * std_dev)
+    bbands = ta.bbands(df['close'], length=20, std=2)
+    if bbands is not None:
+        df[['BB_Low','BB_Mid', 'BB_High']] = bbands.iloc[:, :3]
+    else:
+        raise ValueError("Failed to compute Bollinger Bands.")
+
 
     last_price = df['close'].iloc[-1]
-    upper_band_value = df['upper_band'].iloc[-1]
-    lower_band_value = df['lower_band'].iloc[-1]
+    upper_band_value = df['BB_High'].iloc[-1]
+    lower_band_value = df['BB_Low'].iloc[-1]
+
+    # dist = distance_to_indicator(last_price, upper_band_value)
+    # print("distance to upper band :", dist)
+
+    # low_dist = distance_to_indicator(last_price, lower_band_value)
+    # print("distance to lower band :", low_dist)
+    # #print("=======================================")
 
     if abs(last_price - upper_band_value) <= tolerance * upper_band_value:
         return 'upper_band'
@@ -197,3 +210,19 @@ async def is_price_near_bollinger_band(df, tolerance, period=20, std_dev=2):
         return 'lower_band'
     else:
         return 'neutral'
+
+def distance_to_indicator(current_price, indicator_value):
+    """
+    Calculates the percentage distance between the current market price and an indicator.
+    :param current_price: The current price of the market (float).
+    :param indicator_value: The value of the technical indicator (float).
+    :return: The percentage distance (float).
+    """
+    # Calculate absolute difference between current price and indicator
+    difference = abs(current_price - indicator_value)
+
+    # Calculate the percentage distance (relative to current price)
+    percentage_distance = (difference / current_price) * 100
+    
+    return percentage_distance
+
