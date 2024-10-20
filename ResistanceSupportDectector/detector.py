@@ -3,7 +3,7 @@ import numpy as np
 from utils import indicators
 from utils.indicators import Indicator
 import asyncio
-import pandas_ta as ta
+# import pandas_ta as ta
 
 async def is_support_resistance(df, ma_period=10):
     """
@@ -151,6 +151,100 @@ async def check_ema(df, tolerance, breakout_value, period=200):
         return None
 
 
+# async def is_bollinger_band_support_resistance(df, period=20, std_dev=2):
+#     """
+#     Determines whether the Bollinger Band is acting as support or resistance.
+#     Args:
+#         df: Pandas DataFrame containing price data with columns 'close'.
+#         period: Period for calculating the moving average.
+#         std_dev: Number of standard deviations for the Bollinger Bands.
+#     Returns:
+#         'support', 'resistance', or 'neutral'.
+#     """
+#     bbands = ta.bbands(df['close'], length=20, std=2)
+#     if bbands is not None:
+#         df[['BB_Low','BB_Mid', 'BB_High']] = bbands.iloc[:, :3]
+#     else:
+#         raise ValueError("Failed to compute Bollinger Bands.")
+
+#     if df['close'].iloc[-1] <= df['BB_Low'].iloc[-1] and df['close'].iloc[-2] > df['BB_Low'].iloc[-2]:
+#         return 'support'
+#     elif df['close'].iloc[-1] >= df['BB_High'].iloc[-1] and df['close'].iloc[-2] < df['BB_High'].iloc[-2]:
+#         return 'resistance'
+#     else:
+#         return 'neutral'
+
+
+# async def is_price_near_bollinger_band(df, tolerance, period=20, std_dev=2):
+#     """
+#     Checks if the current price is near the upper or lower Bollinger Band.
+#     Args:
+#         df: Pandas DataFrame containing price data with columns 'close'.
+#         period: Period for calculating the moving average.
+#         std_dev: Number of standard deviations for the Bollinger Bands.
+#         tolerance: Percentage tolerance for considering price near the band.
+#     Returns:
+#         'upper_band', 'lower_band', or 'neutral'.
+#     """
+#     bbands = ta.bbands(df['close'], length=20, std=2)
+#     if bbands is not None:
+#         df[['BB_Low','BB_Mid', 'BB_High']] = bbands.iloc[:, :3]
+#     else:
+#         raise ValueError("Failed to compute Bollinger Bands.")
+
+
+#     last_price = df['close'].iloc[-1]
+#     upper_band_value = df['BB_High'].iloc[-1]
+#     lower_band_value = df['BB_Low'].iloc[-1]
+
+#     # dist = distance_to_indicator(last_price, upper_band_value)
+#     # print("distance to upper band :", dist)
+
+#     # low_dist = distance_to_indicator(last_price, lower_band_value)
+#     # print("distance to lower band :", low_dist)
+#     # #print("=======================================")
+
+#     if abs(last_price - upper_band_value) <= tolerance * upper_band_value:
+#         return 'upper_band'
+#     elif abs(last_price - lower_band_value) <= tolerance * lower_band_value:
+#         return 'lower_band'
+#     else:
+#         return 'neutral'
+
+# def distance_to_indicator(current_price, indicator_value):
+#     """
+#     Calculates the percentage distance between the current market price and an indicator.
+#     :param current_price: The current price of the market (float).
+#     :param indicator_value: The value of the technical indicator (float).
+#     :return: The percentage distance (float).
+#     """
+#     # Calculate absolute difference between current price and indicator
+#     difference = abs(current_price - indicator_value)
+
+#     # Calculate the percentage distance (relative to current price)
+#     percentage_distance = (difference / current_price) * 100
+    
+#     return percentage_distance
+
+import pandas as pd
+
+async def calculate_bollinger_bands(df, period=20, std_dev=2):
+    """
+    Calculates Bollinger Bands for the given DataFrame.
+    Args:
+        df: Pandas DataFrame containing price data with columns 'close'.
+        period: Period for calculating the moving average.
+        std_dev: Number of standard deviations for the Bollinger Bands.
+    Returns:
+        DataFrame with Bollinger Bands (BB_Low, BB_Mid, BB_High).
+    """
+    df['BB_Mid'] = df['close'].rolling(window=period).mean()
+    df['BB_STD'] = df['close'].rolling(window=period).std()
+    df['BB_High'] = df['BB_Mid'] + (std_dev * df['BB_STD'])
+    df['BB_Low'] = df['BB_Mid'] - (std_dev * df['BB_STD'])
+
+    return df[['BB_Low', 'BB_Mid', 'BB_High']]
+
 async def is_bollinger_band_support_resistance(df, period=20, std_dev=2):
     """
     Determines whether the Bollinger Band is acting as support or resistance.
@@ -161,11 +255,8 @@ async def is_bollinger_band_support_resistance(df, period=20, std_dev=2):
     Returns:
         'support', 'resistance', or 'neutral'.
     """
-    bbands = ta.bbands(df['close'], length=20, std=2)
-    if bbands is not None:
-        df[['BB_Low','BB_Mid', 'BB_High']] = bbands.iloc[:, :3]
-    else:
-        raise ValueError("Failed to compute Bollinger Bands.")
+    # Calculate Bollinger Bands
+    df[['BB_Low', 'BB_Mid', 'BB_High']] = await calculate_bollinger_bands(df, period, std_dev)
 
     if df['close'].iloc[-1] <= df['BB_Low'].iloc[-1] and df['close'].iloc[-2] > df['BB_Low'].iloc[-2]:
         return 'support'
@@ -173,7 +264,6 @@ async def is_bollinger_band_support_resistance(df, period=20, std_dev=2):
         return 'resistance'
     else:
         return 'neutral'
-
 
 async def is_price_near_bollinger_band(df, tolerance, period=20, std_dev=2):
     """
@@ -186,23 +276,12 @@ async def is_price_near_bollinger_band(df, tolerance, period=20, std_dev=2):
     Returns:
         'upper_band', 'lower_band', or 'neutral'.
     """
-    bbands = ta.bbands(df['close'], length=20, std=2)
-    if bbands is not None:
-        df[['BB_Low','BB_Mid', 'BB_High']] = bbands.iloc[:, :3]
-    else:
-        raise ValueError("Failed to compute Bollinger Bands.")
-
+    # Calculate Bollinger Bands
+    df[['BB_Low', 'BB_Mid', 'BB_High']] = await calculate_bollinger_bands(df, period, std_dev)
 
     last_price = df['close'].iloc[-1]
     upper_band_value = df['BB_High'].iloc[-1]
     lower_band_value = df['BB_Low'].iloc[-1]
-
-    # dist = distance_to_indicator(last_price, upper_band_value)
-    # print("distance to upper band :", dist)
-
-    # low_dist = distance_to_indicator(last_price, lower_band_value)
-    # print("distance to lower band :", low_dist)
-    # #print("=======================================")
 
     if abs(last_price - upper_band_value) <= tolerance * upper_band_value:
         return 'upper_band'
@@ -214,9 +293,11 @@ async def is_price_near_bollinger_band(df, tolerance, period=20, std_dev=2):
 def distance_to_indicator(current_price, indicator_value):
     """
     Calculates the percentage distance between the current market price and an indicator.
-    :param current_price: The current price of the market (float).
-    :param indicator_value: The value of the technical indicator (float).
-    :return: The percentage distance (float).
+    Args:
+        current_price: The current price of the market (float).
+        indicator_value: The value of the technical indicator (float).
+    Returns:
+        The percentage distance (float).
     """
     # Calculate absolute difference between current price and indicator
     difference = abs(current_price - indicator_value)
@@ -225,4 +306,3 @@ def distance_to_indicator(current_price, indicator_value):
     percentage_distance = (difference / current_price) * 100
     
     return percentage_distance
-

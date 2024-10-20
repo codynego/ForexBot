@@ -177,7 +177,7 @@ from ResistanceSupportDectector.detector import (
 import asyncio
 from ResistanceSupportDectector.spikeDectector import detect_spikes
 from ResistanceSupportDectector.aiStartegy import MyStrategy, combine_timeframe_signals
-import pandas_ta as ta
+# import pandas_ta as ta
 class Strategy:
 
     @classmethod
@@ -366,31 +366,82 @@ def calculate_overall_volatility_from_df(dataframes, weights=(0.4, 0.3, 0.3)):
 
 import pandas as pd
 
-def calculate_features(m5_data, m15_data, h1_data):
+# def calculate_features(m5_data, m15_data, h1_data):
 
+#     # Calculate indicators for M5 timeframe
+#     m5_data['close_m5'] = m5_data['close']
+#     m5_data['MA10_m5'] = ta.sma(m5_data['close'], length=10)
+#     m5_data['MA48_m5'] = ta.sma(m5_data['close'], length=48)
+#     m5_data['EMA200_m5'] = ta.ema(m5_data['close'], length=200)
+#     m5_data[['BB_Low_m5', 'BB_Mid_m5', 'BB_High_m5' ]] = ta.bbands(m5_data['close'], length=20, std=2).iloc[:, :3]
+
+
+#     # Calculate indicators for M15 timeframe
+#     m15_data['close_m15'] = m15_data['close']
+#     m15_data['MA10_m15'] = ta.sma(m15_data['close'], length=10)
+#     m15_data['MA48_m15'] = ta.sma(m15_data['close'], length=48)
+#     m15_data['EMA200_m15'] = ta.ema(m15_data['close'], length=200)
+#     m15_data[['BB_Low_m15','BB_Mid_m15', 'BB_High_m15']] = ta.bbands(m15_data['close'], length=20, std=2).iloc[:, :3]
+
+#     # Calculate indicators for H1 timeframe
+#     h1_data['close_h1'] = h1_data['close']
+#     h1_data['MA10_h1'] = ta.sma(h1_data['close'], length=10)
+#     h1_data['MA48_h1'] = ta.sma(h1_data['close'], length=48)
+#     h1_data['EMA200_h1'] = ta.ema(h1_data['close'], length=200)
+#     h1_data[['BB_High_h1', 'BB_Mid_h1', 'BB_Low_h1']]= ta.bbands(h1_data['close'], length=20).iloc[:, :3]
+
+#     # Calculate timeframe tolerances (this can be adjusted depending on how you calculate tolerance)
+#     m5_data['Timeframe_Tolerance_M5'] = abs(m5_data['close'] - m5_data['MA10_m5']) / m5_data['MA10_m5'] * 100
+#     m15_data['Timeframe_Tolerance_M15'] = abs(m15_data['close'] - m15_data['MA10_m15']) / m15_data['MA10_m15'] * 100
+#     h1_data['Timeframe_Tolerance_h1'] = abs(h1_data['close'] - h1_data['MA10_h1']) / h1_data['MA10_h1'] * 100
+
+#     # Merge dataframes on index
+#     combined_data = pd.concat([m5_data, m15_data, h1_data], axis=1, join='inner')
+
+#     # Select relevant features
+#     features = combined_data[['close_m5', 'close_m15', 'close_h1', 'MA10_m5',
+#                              'MA48_m5', 'EMA200_m5', 'BB_High_m5', 'BB_Low_m5',
+#                              'MA10_m15', 'MA48_m15', 'EMA200_m15', 'BB_High_m15', 'BB_Low_m15',
+#                              'MA10_h1', 'MA48_h1', 'EMA200_h1', 'BB_High_h1', 'BB_Low_h1',
+#                              'Timeframe_Tolerance_M5', 'Timeframe_Tolerance_M15', 'Timeframe_Tolerance_h1']]
+
+#     return features.tail(1)
+
+
+import pandas as pd
+
+def calculate_features(m5_data, m15_data, h1_data):
     # Calculate indicators for M5 timeframe
     m5_data['close_m5'] = m5_data['close']
-    m5_data['MA10_m5'] = ta.sma(m5_data['close'], length=10)
-    m5_data['MA48_m5'] = ta.sma(m5_data['close'], length=48)
-    m5_data['EMA200_m5'] = ta.ema(m5_data['close'], length=200)
-    m5_data[['BB_Low_m5', 'BB_Mid_m5', 'BB_High_m5' ]] = ta.bbands(m5_data['close'], length=20, std=2).iloc[:, :3]
-
+    m5_data['MA10_m5'] = m5_data['close'].rolling(window=10).mean()
+    m5_data['MA48_m5'] = m5_data['close'].rolling(window=48).mean()
+    m5_data['EMA200_m5'] = m5_data['close'].ewm(span=200, adjust=False).mean()
+    m5_data['BB_Mid_m5'] = m5_data['close'].rolling(window=20).mean()
+    m5_data['BB_STD_m5'] = m5_data['close'].rolling(window=20).std()
+    m5_data['BB_Low_m5'] = m5_data['BB_Mid_m5'] - (m5_data['BB_STD_m5'] * 2)
+    m5_data['BB_High_m5'] = m5_data['BB_Mid_m5'] + (m5_data['BB_STD_m5'] * 2)
 
     # Calculate indicators for M15 timeframe
     m15_data['close_m15'] = m15_data['close']
-    m15_data['MA10_m15'] = ta.sma(m15_data['close'], length=10)
-    m15_data['MA48_m15'] = ta.sma(m15_data['close'], length=48)
-    m15_data['EMA200_m15'] = ta.ema(m15_data['close'], length=200)
-    m15_data[['BB_Low_m15','BB_Mid_m15', 'BB_High_m15']] = ta.bbands(m15_data['close'], length=20, std=2).iloc[:, :3]
+    m15_data['MA10_m15'] = m15_data['close'].rolling(window=10).mean()
+    m15_data['MA48_m15'] = m15_data['close'].rolling(window=48).mean()
+    m15_data['EMA200_m15'] = m15_data['close'].ewm(span=200, adjust=False).mean()
+    m15_data['BB_Mid_m15'] = m15_data['close'].rolling(window=20).mean()
+    m15_data['BB_STD_m15'] = m15_data['close'].rolling(window=20).std()
+    m15_data['BB_Low_m15'] = m15_data['BB_Mid_m15'] - (m15_data['BB_STD_m15'] * 2)
+    m15_data['BB_High_m15'] = m15_data['BB_Mid_m15'] + (m15_data['BB_STD_m15'] * 2)
 
     # Calculate indicators for H1 timeframe
     h1_data['close_h1'] = h1_data['close']
-    h1_data['MA10_h1'] = ta.sma(h1_data['close'], length=10)
-    h1_data['MA48_h1'] = ta.sma(h1_data['close'], length=48)
-    h1_data['EMA200_h1'] = ta.ema(h1_data['close'], length=200)
-    h1_data[['BB_High_h1', 'BB_Mid_h1', 'BB_Low_h1']]= ta.bbands(h1_data['close'], length=20).iloc[:, :3]
+    h1_data['MA10_h1'] = h1_data['close'].rolling(window=10).mean()
+    h1_data['MA48_h1'] = h1_data['close'].rolling(window=48).mean()
+    h1_data['EMA200_h1'] = h1_data['close'].ewm(span=200, adjust=False).mean()
+    h1_data['BB_Mid_h1'] = h1_data['close'].rolling(window=20).mean()
+    h1_data['BB_STD_h1'] = h1_data['close'].rolling(window=20).std()
+    h1_data['BB_Low_h1'] = h1_data['BB_Mid_h1'] - (h1_data['BB_STD_h1'] * 2)
+    h1_data['BB_High_h1'] = h1_data['BB_Mid_h1'] + (h1_data['BB_STD_h1'] * 2)
 
-    # Calculate timeframe tolerances (this can be adjusted depending on how you calculate tolerance)
+    # Calculate timeframe tolerances
     m5_data['Timeframe_Tolerance_M5'] = abs(m5_data['close'] - m5_data['MA10_m5']) / m5_data['MA10_m5'] * 100
     m15_data['Timeframe_Tolerance_M15'] = abs(m15_data['close'] - m15_data['MA10_m15']) / m15_data['MA10_m15'] * 100
     h1_data['Timeframe_Tolerance_h1'] = abs(h1_data['close'] - h1_data['MA10_h1']) / h1_data['MA10_h1'] * 100
@@ -399,13 +450,15 @@ def calculate_features(m5_data, m15_data, h1_data):
     combined_data = pd.concat([m5_data, m15_data, h1_data], axis=1, join='inner')
 
     # Select relevant features
-    features = combined_data[['close_m5', 'close_m15', 'close_h1', 'MA10_m5',
-                             'MA48_m5', 'EMA200_m5', 'BB_High_m5', 'BB_Low_m5',
-                             'MA10_m15', 'MA48_m15', 'EMA200_m15', 'BB_High_m15', 'BB_Low_m15',
-                             'MA10_h1', 'MA48_h1', 'EMA200_h1', 'BB_High_h1', 'BB_Low_h1',
-                             'Timeframe_Tolerance_M5', 'Timeframe_Tolerance_M15', 'Timeframe_Tolerance_h1']]
+    features = combined_data[['close_m5', 'close_m15', 'close_h1', 
+                               'MA10_m5', 'MA48_m5', 'EMA200_m5', 
+                               'BB_High_m5', 'BB_Low_m5',
+                               'MA10_m15', 'MA48_m15', 'EMA200_m15', 
+                               'BB_High_m15', 'BB_Low_m15',
+                               'MA10_h1', 'MA48_h1', 'EMA200_h1', 
+                               'BB_High_h1', 'BB_Low_h1',
+                               'Timeframe_Tolerance_M5', 
+                               'Timeframe_Tolerance_M15', 
+                               'Timeframe_Tolerance_h1']]
 
     return features.tail(1)
-
-
-
