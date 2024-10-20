@@ -202,13 +202,6 @@
             "markers": "python_version >= '3.9'",
             "version": "==2.2.2"
         },
-        "pandas-ta": {
-            "hashes": [
-                "sha256:0fa35aec831d2815ea30b871688a8d20a76b288a7be2d26cc00c35cd8c09a993"
-            ],
-            "index": "pypi",
-            "version": "==0.3.14b0"
-        },
         "python-dateutil": {
             "hashes": [
                 "sha256:37dd54208da7e1cd875388217d5e00ebd4179249f90fb72437e91a35459a0ad3",
