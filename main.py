@@ -31,15 +31,15 @@ async def run_bot(api) -> None:
                 continue
 
             
-            #Skip unwanted signals based on market type
-            if signal['symbol'].startswith("BOOM") and signal["type"].count("SELL") > 1:
-                continue
-            elif signal['symbol'].startswith("CRASH") and signal["type"].count("BUY") > 1:
-                continue
-            elif signal["type"].count("HOLD") > 1:
-                continue
-            elif signal["type"].count("BUY") == 1 and signal["type"].count("SELL") == 1:
-                continue
+            # #Skip unwanted signals based on market type
+            # if signal['symbol'].startswith("BOOM") and signal["type"].count("SELL") > 1:
+            #     continue
+            # elif signal['symbol'].startswith("CRASH") and signal["type"].count("BUY") > 1:
+            #     continue
+            # elif signal["type"].count("HOLD") > 1:
+            #     continue
+            # elif signal["type"].count("BUY") == 1 and signal["type"].count("SELL") == 1:
+            #     continue
 
             # Send signal to Telegram
             print(bot.signal_toString(signal))
@@ -124,7 +124,7 @@ async def main():
     scheduler.add_job(ping_api, 'interval', minutes=1, args=[api])
     
     # Schedule bot to run every 15 minutes
-    scheduler.add_job(run_bot_wrapper, 'interval', minutes=15, args=[api])
+    scheduler.add_job(run_bot_wrapper, 'interval', minutes=1, args=[api])
     
     scheduler.start()
 
