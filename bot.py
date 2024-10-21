@@ -104,13 +104,13 @@ class TradingBot:
         last_indicator_value = calc.tail(1).values[0]
         print(last_indicator_value)
 
-    def generate_signal(self, data, strategy="rsistrategy", symbol=None):
+    async def generate_signal(self, data, strategy="rsistrategy", symbol=None):
         price = data[0]['close'].iloc[-1] # type: ignore
         signal = {"symbol": symbol, "price": price, "type": None, "strength": None}
 
         if strategy == "rsistrategy":
             # stra = Strategy.rsiStrategy(data)
-            result = Strategy.process_multiple_timeframes(data, symbol)
+            result = await Strategy.process_multiple_timeframes(data, symbol)
             if result is None:
                 return None
             stra, strength, all_signals = result
@@ -144,10 +144,10 @@ class TradingBot:
             return signal
             
 
-    def process_multiple_signals(self, data_list, market_list):
-        # Run signals sequentially
-        signals = [self.generate_signal(data, symbol=market) for data, market in zip(data_list, market_list)]
-        return signals
+    async def process_multiple_signals(self, data_list, market_list):
+            # run signals concurretly
+            signals = await asyncio.gather(*(self.generate_signal(data, symbol=market) for data, market in zip(data_list, market_list)))
+            return signals
 
     # async def save_to_database(self, model, symbol, data):
     #     if model == "Market":

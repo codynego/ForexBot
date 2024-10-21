@@ -5,7 +5,7 @@ from utils.indicators import Indicator
 import asyncio
 # import pandas_ta as ta
 
-def is_support_resistance(df, ma_period=10):
+async def is_support_resistance(df, ma_period=10):
     """
     Determines whether the moving average (MA) is acting as support, resistance, or neutral.
     Parameters:
@@ -93,7 +93,7 @@ def ma_support_resistance(df, period, tolerance, min_touches=2, recent_window=3)
     return 'neutral'
 
 
-def is_price_near_ma(df, tolerance, breakout_value, ma_period):
+async def is_price_near_ma(df, tolerance, breakout_value, ma_period):
     """
     Checks if the current price is within a tolerance of the MA and determines if the MA is acting as resistance or support.
     Args:
@@ -123,7 +123,7 @@ def is_price_near_ma(df, tolerance, breakout_value, ma_period):
         return None
 
 
-def check_ema(df, tolerance, breakout_value, period=200):
+async def check_ema(df, tolerance, breakout_value, period=200):
     """
     Check if price is near EMA and if it's acting as support or resistance. If price breaks out beyond a threshold, signal will be False.
     Args:
@@ -151,7 +151,7 @@ def check_ema(df, tolerance, breakout_value, period=200):
         return None
 
 
-# def is_bollinger_band_support_resistance(df, period=20, std_dev=2):
+# async def is_bollinger_band_support_resistance(df, period=20, std_dev=2):
 #     """
 #     Determines whether the Bollinger Band is acting as support or resistance.
 #     Args:
@@ -175,7 +175,7 @@ def check_ema(df, tolerance, breakout_value, period=200):
 #         return 'neutral'
 
 
-# def is_price_near_bollinger_band(df, tolerance, period=20, std_dev=2):
+# async def is_price_near_bollinger_band(df, tolerance, period=20, std_dev=2):
 #     """
 #     Checks if the current price is near the upper or lower Bollinger Band.
 #     Args:
@@ -228,7 +228,7 @@ def check_ema(df, tolerance, breakout_value, period=200):
 
 import pandas as pd
 
-def calculate_bollinger_bands(df, period=20, std_dev=2):
+async def calculate_bollinger_bands(df, period=20, std_dev=2):
     """
     Calculates Bollinger Bands for the given DataFrame.
     Args:
@@ -245,7 +245,7 @@ def calculate_bollinger_bands(df, period=20, std_dev=2):
 
     return df[['BB_Low', 'BB_Mid', 'BB_High']]
 
-def is_bollinger_band_support_resistance(df, period=20, std_dev=2):
+async def is_bollinger_band_support_resistance(df, period=20, std_dev=2):
     """
     Determines whether the Bollinger Band is acting as support or resistance.
     Args:
@@ -256,7 +256,7 @@ def is_bollinger_band_support_resistance(df, period=20, std_dev=2):
         'support', 'resistance', or 'neutral'.
     """
     # Calculate Bollinger Bands
-    df[['BB_Low', 'BB_Mid', 'BB_High']] = calculate_bollinger_bands(df, period, std_dev)
+    df[['BB_Low', 'BB_Mid', 'BB_High']] = await calculate_bollinger_bands(df, period, std_dev)
 
     if df['close'].iloc[-1] <= df['BB_Low'].iloc[-1] and df['close'].iloc[-2] > df['BB_Low'].iloc[-2]:
         return 'support'
@@ -265,7 +265,7 @@ def is_bollinger_band_support_resistance(df, period=20, std_dev=2):
     else:
         return 'neutral'
 
-def is_price_near_bollinger_band(df, tolerance, period=20, std_dev=2):
+async def is_price_near_bollinger_band(df, tolerance, period=20, std_dev=2):
     """
     Checks if the current price is near the upper or lower Bollinger Band.
     Args:
@@ -277,7 +277,7 @@ def is_price_near_bollinger_band(df, tolerance, period=20, std_dev=2):
         'upper_band', 'lower_band', or 'neutral'.
     """
     # Calculate Bollinger Bands
-    df[['BB_Low', 'BB_Mid', 'BB_High']] = calculate_bollinger_bands(df, period, std_dev)
+    df[['BB_Low', 'BB_Mid', 'BB_High']] = await calculate_bollinger_bands(df, period, std_dev)
 
     last_price = df['close'].iloc[-1]
     upper_band_value = df['BB_High'].iloc[-1]

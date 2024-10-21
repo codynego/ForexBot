@@ -14,7 +14,7 @@ from telebot import send_telegram_message, start
 bot = TradingBot(Config.MT5_LOGIN, Config.MT5_PASSWORD, Config.MT5_SERVER)
 
 async def run_bot(api) -> None:
-    try:
+    # try:
         print("Fetching data...")
         timezone = pytz.timezone("Etc/UTC")
         end_time = datetime.now(tz=timezone)
@@ -24,30 +24,30 @@ async def run_bot(api) -> None:
         data = await bot.fetch_data_for_multiple_markets(api, Config.MARKETS_LIST)
         
         # Process multiple signals
-        signals = bot.process_multiple_signals(data, Config.MARKETS_LIST)
+        signals = await bot.process_multiple_signals(data, Config.MARKETS_LIST)
         
         for signal in signals:
             if signal is None or signal["type"] == "HOLD":
                 continue
 
             
-            # #Skip unwanted signals based on market type
-            # if signal['symbol'].startswith("BOOM") and signal["type"].count("SELL") > 1:
-            #     continue
-            # elif signal['symbol'].startswith("CRASH") and signal["type"].count("BUY") > 1:
-            #     continue
-            # elif signal["type"].count("HOLD") > 1:
-            #     continue
-            # elif signal["type"].count("BUY") == 1 and signal["type"].count("SELL") == 1:
-            #     continue
+            #Skip unwanted signals based on market type
+            if signal['symbol'].startswith("BOOM") and signal["type"].count("SELL") > 1:
+                continue
+            elif signal['symbol'].startswith("CRASH") and signal["type"].count("BUY") > 1:
+                continue
+            elif signal["type"].count("HOLD") > 1:
+                continue
+            elif signal["type"].count("BUY") == 1 and signal["type"].count("SELL") == 1:
+                continue
 
             # Send signal to Telegram
             print(bot.signal_toString(signal))
             print("=============================")
-            #await send_telegram_message(Config.TELEGRAM_BOT_TOKEN, Config.TELEGRAM_CHANNEL_ID, bot.signal_toString(signal))
+            await send_telegram_message(Config.TELEGRAM_BOT_TOKEN, Config.TELEGRAM_CHANNEL_ID, bot.signal_toString(signal))
             logging.info("Signal: %s", bot.signal_toString(signal))
-    except Exception as e:
-        logging.error("Run bot failed: %s", str(e))
+    # except Exception as e:
+    #     logging.error("Run bot failed: %s", str(e))
 
 
 
@@ -124,7 +124,7 @@ async def main():
     scheduler.add_job(ping_api, 'interval', minutes=1, args=[api])
     
     # Schedule bot to run every 15 minutes
-    scheduler.add_job(run_bot_wrapper, 'interval', minutes=1, args=[api])
+    scheduler.add_job(run_bot_wrapper, 'interval', minutes=15, args=[api])
     
     scheduler.start()
 
