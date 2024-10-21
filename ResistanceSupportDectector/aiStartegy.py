@@ -384,7 +384,7 @@ class MyStrategy():
         self.rsi = bt.rsi(period=14)
         self.df = self.data  # Placeholder for DataFrame with price data
         
-    async def run(self):
+    def run(self):
         # 1. Calculate pivot points
         pivot_point_data = calculate_pivot_points(self.data)
 
@@ -399,16 +399,16 @@ class MyStrategy():
         rsi_value = self.rsi.iloc[-1]
         
         # 4. Check if price is near MA
-        # ma_proximity = await is_price_near_ma(self.df, ma_period=10, tolerance=0.01)
+        # ma_proximity = is_price_near_ma(self.df, ma_period=10, tolerance=0.01)
 
-        # ma48_proximity = await is_price_near_ma(self.df, ma_period=48, tolerance=0.01)
+        # ma48_proximity = is_price_near_ma(self.df, ma_period=48, tolerance=0.01)
         
         # 5. Check Bollinger Band signal
-        bb_signal = await is_price_near_bollinger_band(self.df, period=20, std_dev=2, tolerance=0.01)
+        bb_signal = is_price_near_bollinger_band(self.df, period=20, std_dev=2, tolerance=0.01)
 
-        bb_support_resistance = await is_bollinger_band_support_resistance(self.df)
-        ma_support_resistance  = await is_support_resistance(self.df, 10)
-        ma48_support_resistance  = await is_support_resistance(self.df, 48)
+        bb_support_resistance = is_bollinger_band_support_resistance(self.df)
+        ma_support_resistance  = is_support_resistance(self.df, 10)
+        ma48_support_resistance  = is_support_resistance(self.df, 48)
         
         # 6. Calculate the signal strength
         signal_strength = calculate_signal_strength(
@@ -435,7 +435,7 @@ class MyStrategy():
         return signal_strength
     
 
-async def combine_timeframe_signals(timeframes, weights=None):
+def combine_timeframe_signals(timeframes, weights=None):
         """
         Combines the signal strengths from multiple timeframes using weighted averaging.
 

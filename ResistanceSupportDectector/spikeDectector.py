@@ -1,6 +1,6 @@
 import pandas as pd
 
-async def detect_spikes(df, threshold=0.02, lookback=5):
+def detect_spikes(df, threshold=0.02, lookback=5):
     """
     Detects spikes in price data based on percentage changes and recent volatility.
 

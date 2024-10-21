@@ -31,15 +31,15 @@
 #         # ma48 = indicator.moving_average(48)
 
 #         # Get conditions for moving averages, EMA, and Bollinger Bands
-#         # ma10_behavior = await is_support_resistance(df, 10)
-#         # ma48_behavior = await is_support_resistance(df, 48)
-#         ema_behavior = await check_ema(df, period=200, tolerance=tolerance, breakout_value=breakout_threshold)
-#         bb_behavior = await is_bollinger_band_support_resistance(df)
-#         price_near_bb = await is_price_near_bollinger_band(df, tolerance=tolerance)
+#         # ma10_behavior = is_support_resistance(df, 10)
+#         # ma48_behavior = is_support_resistance(df, 48)
+#         ema_behavior = check_ema(df, period=200, tolerance=tolerance, breakout_value=breakout_threshold)
+#         bb_behavior = is_bollinger_band_support_resistance(df)
+#         price_near_bb = is_price_near_bollinger_band(df, tolerance=tolerance)
 
 #         # Additional checks for proximity to MAs with breakout consideration
-#         price_near_ma48 = await is_price_near_ma(df, tolerance, breakout_threshold, ma_period=48)
-#         price_near_ma10 = await is_price_near_ma(df, tolerance, breakout_threshold, ma_period=10)
+#         price_near_ma48 = is_price_near_ma(df, tolerance, breakout_threshold, ma_period=48)
+#         price_near_ma10 = is_price_near_ma(df, tolerance, breakout_threshold, ma_period=10)
 #         #breakout_48 = df['close'].iloc[-1] > ma48.iloc[-1] * (1 + breakout_threshold)
 
 #         # Define buy and sell conditions
@@ -98,8 +98,8 @@
 #         #     strategy_instance = MyStrategy(df)
 #         #     tasks.append(asyncio.create_task(cls.runStrategy(df, tolerance_adjusted, breakout_threshold)))
         
-#         # result_signals = await asyncio.gather(*tasks)
-#         # combined_strength, combined_signal = await combine_timeframe_signals(result_signals)
+#         # result_signals = asyncio.gather(*tasks)
+#         # combined_strength, combined_signal = combine_timeframe_signals(result_signals)
 
 #         #print(f"Timeframe Results: {result_signals}, Combined Strength: {combined_strength}")
 
@@ -110,10 +110,10 @@
 #             task2.append(asyncio.create_task(cls.runStrategy(df, float(tolerance_adjusted), breakout_threshold)))
 #             tasks.append(asyncio.create_task(startegy.run()))
 
-#         result_signals = await asyncio.gather(*task2) # type: ignore
-#         results = await asyncio.gather(*tasks)
+#         result_signals = asyncio.gather(*task2) # type: ignore
+#         results = asyncio.gather(*tasks)
 
-#         strength, signal = await combine_timeframe_signals(results)
+#         strength, signal = combine_timeframe_signals(results)
 
 #         if all(signal == "BUY" for signal in result_signals):
 #             return [1, strength, result_signals]
@@ -181,7 +181,7 @@ from ResistanceSupportDectector.aiStartegy import MyStrategy, combine_timeframe_
 class Strategy:
 
     @classmethod
-    async def runStrategy(cls, df, tolerance, breakout_threshold=0.0035):
+    def runStrategy(cls, df, tolerance, breakout_threshold=0.0035):
         """
         Generates a buy or sell signal based on various indicators like MA10, MA48, EMA, and Bollinger Bands.
         Prioritizes spike detection and filters signals accordingly.
@@ -197,16 +197,16 @@ class Strategy:
         indicator = Indicator(df)
 
         # Fetch indicators
-        ema_behavior = await check_ema(df, period=200, tolerance=tolerance, breakout_value=breakout_threshold)
-        bb_behavior = await is_bollinger_band_support_resistance(df)
-        price_near_bb = await is_price_near_bollinger_band(df, tolerance=tolerance)
+        ema_behavior = check_ema(df, period=200, tolerance=tolerance, breakout_value=breakout_threshold)
+        bb_behavior = is_bollinger_band_support_resistance(df)
+        price_near_bb = is_price_near_bollinger_band(df, tolerance=tolerance)
 
         # Additional checks for proximity to MAs with breakout consideration
-        price_near_ma48 = await is_price_near_ma(df, tolerance, breakout_threshold, ma_period=48)
-        price_near_ma10 = await is_price_near_ma(df, tolerance, breakout_threshold, ma_period=10)
+        price_near_ma48 = is_price_near_ma(df, tolerance, breakout_threshold, ma_period=48)
+        price_near_ma10 = is_price_near_ma(df, tolerance, breakout_threshold, ma_period=10)
 
         # Detect spikes
-        spike_detected = await detect_spikes(df)
+        spike_detected = detect_spikes(df)
 
         # Define buy and sell conditions with additional spike handling
         buy_conditions = [
@@ -242,7 +242,7 @@ class Strategy:
         return "HOLD"
 
     @classmethod
-    async def process_multiple_timeframes(cls, dataframes, symbol, ma_period=10, tolerance=0.003, breakout_threshold=0.0035, std_dev=2):
+    def process_multiple_timeframes(cls, dataframes, symbol, ma_period=10, tolerance=0.003, breakout_threshold=0.0035, std_dev=2):
         """
         Processes multiple timeframes to generate a combined buy or sell signal. 
         Adjusts tolerance dynamically based on volatility and catches spikes across different timeframes.
@@ -260,7 +260,6 @@ class Strategy:
         overall_volatility = calculate_overall_volatility_from_df(dataframes)
         tolerance_adjusted = tolerance * (1 + overall_volatility)
         features = calculate_features(dataframes[0], dataframes[1], dataframes[2])
-        # path = 'C:/Users/Admin/codynego/mlforfinance/forexBot/Boom500_rf.pkl'
         
         model_paths = {
             "BOOM1000": 'models/Boom1000_rf.pkl',
@@ -269,30 +268,24 @@ class Strategy:
             "CRASH1000": 'models/Crash1000_rf.pkl',
         }
 
-
         if symbol not in model_paths:
             print("Invalid symbol")
             return None
 
         path = model_paths[symbol]
 
-        # load model using joblib
+        # Load model using joblib
         model = joblib.load(path)
         ai_tolerance = model.predict(features)[0]
-        #print(ai_tolerance)
 
-        tasks = []
-        task2 = []
+        result_signals = []
+        results = []
         for df, tol in zip(dataframes, ai_tolerance):
             strategy = MyStrategy(df)
-            task2.append(asyncio.create_task(cls.runStrategy(df, float(tol), breakout_threshold)))
-            tasks.append(asyncio.create_task(strategy.run()))
-            #print("new timeframes: ==============================================")
+            result_signals.append(cls.runStrategy(df, float(tol), breakout_threshold))
+            results.append(strategy.run())
 
-        result_signals = await asyncio.gather(*task2)  # Signals from runStrategy
-        results = await asyncio.gather(*tasks)  # Signals from MyStrategy.run()
-
-        strength, signal = await combine_timeframe_signals(results)
+        strength, signal = combine_timeframe_signals(results)
 
         # Determine final decision based on combined signals
         if all(signal == "BUY" for signal in result_signals):
@@ -305,8 +298,7 @@ class Strategy:
             return [0, strength, result_signals]
         else:
             return [1, strength, result_signals]  # Hold when signals are mixed
-
-# Utility function for ATR and volatility calculations
+    # Utility function for ATR and volatility calculations
 import pandas as pd
 import numpy as np
 

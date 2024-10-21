@@ -24,7 +24,7 @@ async def run_bot(api) -> None:
         data = await bot.fetch_data_for_multiple_markets(api, Config.MARKETS_LIST)
         
         # Process multiple signals
-        signals = await bot.process_multiple_signals(data, Config.MARKETS_LIST)
+        signals = bot.process_multiple_signals(data, Config.MARKETS_LIST)
         
         for signal in signals:
             if signal is None or signal["type"] == "HOLD":
