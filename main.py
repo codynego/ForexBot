@@ -14,7 +14,7 @@ from telebot import send_telegram_message, start
 bot = TradingBot(Config.MT5_LOGIN, Config.MT5_PASSWORD, Config.MT5_SERVER)
 
 async def run_bot(api) -> None:
-    # try:
+    try:
         print("Fetching data...")
         timezone = pytz.timezone("Etc/UTC")
         end_time = datetime.now(tz=timezone)
@@ -46,12 +46,13 @@ async def run_bot(api) -> None:
             print("=============================")
             await send_telegram_message(Config.TELEGRAM_BOT_TOKEN, Config.TELEGRAM_CHANNEL_ID, bot.signal_toString(signal))
             logging.info("Signal: %s", bot.signal_toString(signal))
-    # except Exception as e:
-    #     logging.error("Run bot failed: %s", str(e))
+    except Exception as e:
+        logging.error("Run bot failed: %s", str(e))
 
 
 
 async def ping_api(api):
+    
     try:
         response = await api.ping({"ping": 1})
         if response['ping']:
@@ -75,7 +76,7 @@ async def reconnect():
 
     while not response['ping'] or retry_attempts < max_retries or not connect:
         print(f"Retrying to connect... attempt {retry_attempts + 1}")
-        await asyncio.sleep(3)
+        await asyncio.sleep(300)
         retry_attempts += 1
         connect, api = await bot.connect_deriv(app_id="1089")
     
@@ -124,7 +125,7 @@ async def main():
     scheduler.add_job(ping_api, 'interval', minutes=1, args=[api])
     
     # Schedule bot to run every 15 minutes
-    scheduler.add_job(run_bot_wrapper, 'interval', minutes=15, args=[api])
+    scheduler.add_job(run_bot_wrapper, 'interval', minutes=1, args=[api])
     
     scheduler.start()
 
