@@ -125,7 +125,7 @@ async def main():
     scheduler.add_job(ping_api, 'interval', minutes=1, args=[api])
     
     # Schedule bot to run every 15 minutes
-    scheduler.add_job(run_bot_wrapper, 'interval', minutes=1, args=[api])
+    scheduler.add_job(run_bot_wrapper, 'interval', minutes=15, args=[api])
     
     scheduler.start()
 

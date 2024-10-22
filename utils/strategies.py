@@ -277,10 +277,10 @@ class Strategy:
         path = model_paths[symbol]
 
         # # load model using joblib
-        model = joblib.load(path)
-        ai_tolerance = model.predict(features)[0]
+        # model = joblib.load(path)
+        # ai_tolerance = model.predict(features)[0]
         #print(ai_tolerance)
-        #ai_tolerance = [0.387343, 0.46574, 0.62282]
+        ai_tolerance = [0.4841181699901201, 0.6880530156825942, 0.8801958847554617]
 
         tasks = []
         task2 = []
