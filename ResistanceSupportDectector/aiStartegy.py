@@ -404,8 +404,7 @@ class MyStrategy():
         # ma48_proximity = await is_price_near_ma(self.df, ma_period=48, tolerance=0.01)
         
         # 5. Check Bollinger Band signal
-        bb_signal = await is_price_near_bollinger_band(self.df, period=20, std_dev=2, tolerance=0.01)
-
+        bb_signal = await is_price_near_bollinger_band(self.df, 0.03, 0.05)
         bb_support_resistance = await is_bollinger_band_support_resistance(self.df)
         ma_support_resistance  = await is_support_resistance(self.df, 10)
         ma48_support_resistance  = await is_support_resistance(self.df, 48)

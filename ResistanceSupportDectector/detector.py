@@ -265,7 +265,7 @@ async def is_bollinger_band_support_resistance(df, period=20, std_dev=2):
     else:
         return 'neutral'
 
-async def is_price_near_bollinger_band(df, tolerance, period=20, std_dev=2):
+async def is_price_near_bollinger_band(df, high_tol, low_tol, period=20, std_dev=2):
     """
     Checks if the current price is near the upper or lower Bollinger Band.
     Args:
@@ -283,9 +283,9 @@ async def is_price_near_bollinger_band(df, tolerance, period=20, std_dev=2):
     upper_band_value = df['BB_High'].iloc[-1]
     lower_band_value = df['BB_Low'].iloc[-1]
 
-    if abs(last_price - upper_band_value) <= tolerance * upper_band_value:
+    if abs(last_price - upper_band_value) <= high_tol * upper_band_value:
         return 'upper_band'
-    elif abs(last_price - lower_band_value) <= tolerance * lower_band_value:
+    elif abs(last_price - lower_band_value) <= low_tol * lower_band_value:
         return 'lower_band'
     else:
         return 'neutral'

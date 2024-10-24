@@ -140,6 +140,7 @@ if __name__ == "__main__":
         asyncio.run(main())
 
         # Telegram Bot Setup
+
         BOT_TOKEN = Config.TELEGRAM_BOT_TOKEN
         app = ApplicationBuilder().token(BOT_TOKEN).build()
 

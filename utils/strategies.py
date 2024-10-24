@@ -195,18 +195,21 @@ class Strategy:
             "BUY", "SELL", or "HOLD" based on the signal evaluation and spike detection.
         """
         indicator = Indicator(df)
+        #print(tolerance)
+        ma10_tol, ma48_tol, ema_tol, high_tol, low_tol = tolerance
 
         # Fetch indicators
-        ema_behavior = await check_ema(df, period=200, tolerance=tolerance, breakout_value=breakout_threshold)
+        ema_behavior = await check_ema(df, period=200, tolerance=float(ema_tol), breakout_value=breakout_threshold)
         bb_behavior = await is_bollinger_band_support_resistance(df)
-        price_near_bb = await is_price_near_bollinger_band(df, tolerance=tolerance)
+        price_near_bb = await is_price_near_bollinger_band(df, float(high_tol), float(low_tol))
 
         # Additional checks for proximity to MAs with breakout consideration
-        price_near_ma48 = await is_price_near_ma(df, tolerance, breakout_threshold, ma_period=48)
-        price_near_ma10 = await is_price_near_ma(df, tolerance, breakout_threshold, ma_period=10)
+        price_near_ma48 = await is_price_near_ma(df, float(ma48_tol), breakout_threshold, ma_period=48)
+        price_near_ma10 = await is_price_near_ma(df, float(ma10_tol), breakout_threshold, ma_period=10)
 
         # Detect spikes
         spike_detected = await detect_spikes(df)
+        #print("tolerance", tolerance)
 
         # Define buy and sell conditions with additional spike handling
         buy_conditions = [
@@ -226,13 +229,15 @@ class Strategy:
 
         # Apply noise filtering based on volatility
         atr_value = calculate_atr(df)
-        noise_filter = atr_value > tolerance  # Only act if market volatility is significant
+        noise_filter = atr_value > sum(tolerance) / 5  # Only act if market volatility is significant
 
+        #print("noise", sum(tolerance) / 5)
         # Decision-making logic
         buy_score = buy_conditions.count(True)
         sell_score = sell_conditions.count(True)
         confidence_score = buy_score - sell_score  # Positive for buy, negative for sell
-
+        # print("buy conditions: ", buy_conditions)
+        # print("sell conditions: ", sell_conditions)
         # Only proceed with high volatility (noise filtering)
         if noise_filter:
             if confidence_score > 0:
@@ -240,9 +245,16 @@ class Strategy:
             elif confidence_score < 0:
                 return "SELL"
         return "HOLD"
+        # if buy_score > sell_score:
+        #     return "BUY"
+        # elif sell_score > buy_score:
+        #     return "SELL"
+        # else:
+        #         return "HOLD"
+
 
     @classmethod
-    async def process_multiple_timeframes(cls, dataframes, symbol, ma_period=10, tolerance=0.003, breakout_threshold=0.0035, std_dev=2):
+    async def process_multiple_timeframes(cls, dataframes, symbol, ma_period=10, tolerance=0.03, breakout_threshold=0.0035, std_dev=2):
         """
         Processes multiple timeframes to generate a combined buy or sell signal. 
         Adjusts tolerance dynamically based on volatility and catches spikes across different timeframes.
@@ -257,16 +269,16 @@ class Strategy:
         Returns:
             A tuple containing the final signal ("BUY", "SELL", or "HOLD"), the overall signal strength, and detailed signals from each timeframe.
         """
-        overall_volatility = calculate_overall_volatility_from_df(dataframes)
-        tolerance_adjusted = tolerance * (1 + overall_volatility)
+        #overall_volatility = calculate_overall_volatility_from_df(dataframes)
+        #tolerance_adjusted = tolerance * (1 + overall_volatility)
         features = calculate_features(dataframes[0], dataframes[1], dataframes[2])
         # path = 'C:/Users/Admin/codynego/mlforfinance/forexBot/Boom500_rf.pkl'
         
         model_paths = {
-            "BOOM1000": 'models/Boom1000_rf.pkl',
-            "BOOM500": 'models/Boom500_rf.pkl',
-            "CRASH500": 'models/Crash500_rf.pkl',
-            "CRASH1000": 'models/Crash1000_rf.pkl',
+            "BOOM1000": 'newmodels/new_Boom1000_rf.pkl',
+            "BOOM500": 'newmodels/new_Boom500_rf.pkl',
+            "CRASH500": 'newmodels/new_Crash500_rf.pkl',
+            "CRASH1000": 'newmodels/Crash1000_rf.pkl',
         }
 
 
@@ -276,17 +288,26 @@ class Strategy:
 
         path = model_paths[symbol]
 
-        # # load model using joblib
-        # model = joblib.load(path)
-        # ai_tolerance = model.predict(features)[0]
-        #print(ai_tolerance)
-        ai_tolerance = [0.4841181699901201, 0.6880530156825942, 0.8801958847554617]
+        # load model using joblib
+        model = joblib.load(path)
+        ai_tolerance = model.predict(features)[0]
+        # print(ai_tolerance)
 
+        split_data = np.split(ai_tolerance, len(ai_tolerance) // 5)
+
+        # Assign to respective timeframes
+        #print(ai_tolerance)
+
+        m15_indicators, m30_indicators, h1_indicators = split_data
+        # print("M5 Indicators:", m5_indicators)
+        ai_tolerance = [m15_indicators, m30_indicators, h1_indicators]
+        #ai_tolerance = [0.4841181699901201, 0.6880530156825942, 0.8801958847554617]
+        #print(ai_tolerance)
         tasks = []
         task2 = []
         for df, tol in zip(dataframes, ai_tolerance):
             strategy = MyStrategy(df)
-            task2.append(asyncio.create_task(cls.runStrategy(df, float(tol), breakout_threshold)))
+            task2.append(asyncio.create_task(cls.runStrategy(df, tol, breakout_threshold)))
             tasks.append(asyncio.create_task(strategy.run()))
             #print("new timeframes: ==============================================")
 
@@ -305,7 +326,7 @@ class Strategy:
         elif result_signals.count("SELL") > result_signals.count("BUY"):
             return [0, strength, result_signals]
         else:
-            return [1, strength, result_signals]  # Hold when signals are mixed
+            return [-1, strength, result_signals]  # Hold when signals are mixed
 
 # Utility function for ATR and volatility calculations
 import pandas as pd
@@ -442,6 +463,13 @@ def calculate_features(m5_data, m15_data, h1_data):
     h1_data['BB_Low_h1'] = h1_data['BB_Mid_h1'] - (h1_data['BB_STD_h1'] * 2)
     h1_data['BB_High_h1'] = h1_data['BB_Mid_h1'] + (h1_data['BB_STD_h1'] * 2)
 
+    
+    # Tolerance calculation as a percentage of the close price
+    # M5 Tolerances in %
+
+    # # Print a sample of the data to check results
+    # print(m5_data[['close', 'MA10_m5', 'Tolerance_MA10_m5', 'Tolerance_EMA200_m5']].tail())
+
     # Calculate timeframe tolerances
     m5_data['Timeframe_Tolerance_M5'] = abs(m5_data['close'] - m5_data['MA10_m5']) / m5_data['MA10_m5'] * 100
     m15_data['Timeframe_Tolerance_M15'] = abs(m15_data['close'] - m15_data['MA10_m15']) / m15_data['MA10_m15'] * 100
@@ -457,9 +485,6 @@ def calculate_features(m5_data, m15_data, h1_data):
                                'MA10_m15', 'MA48_m15', 'EMA200_m15', 
                                'BB_High_m15', 'BB_Low_m15',
                                'MA10_h1', 'MA48_h1', 'EMA200_h1', 
-                               'BB_High_h1', 'BB_Low_h1',
-                               'Timeframe_Tolerance_M5', 
-                               'Timeframe_Tolerance_M15', 
-                               'Timeframe_Tolerance_h1']]
+                               'BB_High_h1', 'BB_Low_h1']]
 
     return features.tail(1)
