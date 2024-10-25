@@ -196,7 +196,9 @@ class Strategy:
         """
         indicator = Indicator(df)
         #print(tolerance)
-        ma10_tol, ma48_tol, ema_tol, high_tol, low_tol = tolerance
+        #print("min tolerance: ", min(tolerance) / 2)
+        tolerance = min(tolerance)
+        ma10_tol = ma48_tol = ema_tol = high_tol = low_tol = tolerance / 2
 
         # Fetch indicators
         ema_behavior = await check_ema(df, period=200, tolerance=float(ema_tol), breakout_value=breakout_threshold)
@@ -213,31 +215,31 @@ class Strategy:
 
         # Define buy and sell conditions with additional spike handling
         buy_conditions = [
-            price_near_ma10 == 'support',
-            price_near_ma48 == 'support',
-            ema_behavior == 'support',
-            bb_behavior == 'support' and price_near_bb == 'lower_band',
-            spike_detected == "spike_down"  # Spike down detected, consider buying
+            price_near_ma10 == 'BUY',
+            price_near_ma48 == 'BUY',
+            ema_behavior == 'BUY',
+            price_near_bb == 'BUY',
+            #spike_detected == "spike_up"  # Spike down detected, consider buying
         ]
         sell_conditions = [
-            price_near_ma10 == 'resistance',
-            price_near_ma48 == 'resistance',
-            ema_behavior == 'resistance',
-            bb_behavior == 'resistance' and price_near_bb == 'upper_band',
-            spike_detected == "spike_up"  # Spike up detected, consider selling
+            price_near_ma10 == 'SELL',
+            price_near_ma48 == 'SELL',
+            ema_behavior == 'SELL',
+            price_near_bb == 'SELL',
+            #spike_detected == "SELL"  # Spike up detected, consider selling
         ]
 
         # Apply noise filtering based on volatility
         atr_value = calculate_atr(df)
-        noise_filter = atr_value > sum(tolerance) / 5  # Only act if market volatility is significant
+        noise_filter = atr_value > tolerance  # Only act if market volatility is significant
 
         #print("noise", sum(tolerance) / 5)
         # Decision-making logic
         buy_score = buy_conditions.count(True)
         sell_score = sell_conditions.count(True)
         confidence_score = buy_score - sell_score  # Positive for buy, negative for sell
-        # print("buy conditions: ", buy_conditions)
-        # print("sell conditions: ", sell_conditions)
+        #print("buy conditions: ", buy_conditions)
+        #print("sell conditions: ", sell_conditions)
         # Only proceed with high volatility (noise filtering)
         if noise_filter:
             if confidence_score > 0:
@@ -308,9 +310,9 @@ class Strategy:
         for df, tol in zip(dataframes, ai_tolerance):
             strategy = MyStrategy(df)
             task2.append(asyncio.create_task(cls.runStrategy(df, tol, breakout_threshold)))
-            tasks.append(asyncio.create_task(strategy.run()))
-            #print("new timeframes: ==============================================")
-
+            tasks.append(asyncio.create_task(strategy.run(min(tol))))
+            ##print("new timeframes: ==============================================")
+        #print("new market: =================================" )
         result_signals = await asyncio.gather(*task2)  # Signals from runStrategy
         results = await asyncio.gather(*tasks)  # Signals from MyStrategy.run()
 

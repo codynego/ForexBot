@@ -1,5 +1,5 @@
 import pandas as pd
-from ResistanceSupportDectector.detector import is_price_near_bollinger_band, is_bollinger_band_support_resistance, is_support_resistance
+from ResistanceSupportDectector.detector import is_price_near_bollinger_band, is_price_near_ma, check_ema
 from utils.indicators import Indicator
 from config import Config
 
@@ -281,8 +281,8 @@ def calculate_signal_strength(
     pivot_point_data, 
     bb_signal, 
     ma_support_resistance,
-    ma48_support_resistance, 
-    bb_support_resistance, 
+    ma48_support_resistance,
+    ema_check,
     spike_indices, 
     current_index
 ):
@@ -308,34 +308,36 @@ def calculate_signal_strength(
     strength = 0.5  # Start with neutral strength (0.5 represents neutral, 0 strong sell, 1 strong buy)
 
     ### Moving Average (MA) Proximity and Support/Resistance ###
-    if ma_support_resistance == 'support':
+    if ma_support_resistance == 'BUY':
         strength += 0.1  # Stronger buy signal if the moving average acts as support
-    elif ma_support_resistance == 'resistance':
+    elif ma_support_resistance == 'SELL':
         strength -= 0.1  # Stronger sell signal if the moving average acts as resistance
 
 
-    if ma48_support_resistance == 'support':
+    if ma48_support_resistance == 'BUY':
         strength += 0.1  # Stronger buy signal if the moving average acts as support
-    elif ma48_support_resistance == 'resistance':
+    elif ma48_support_resistance == 'SELL':
         strength -= 0.1  # Stronger sell signal if the moving average acts as resistance
     
     # # If price is near the moving average, slightly boost the signal strength
-    # if ma_proximity:
-    #     strength += 0.05
+    if ema_check == "BUY":
+        strength += 0.1
+    elif ema_check == "SELL":
+        strength -= 0.1
 
     # if ma48_proximity:
     #     strength += 0.05
 
-    ### Bollinger Band (BB) Proximity and Support/Resistance ###
-    if bb_support_resistance == 'support':
-        strength += 0.15  # Strong buy if the Bollinger Band acts as support
-    elif bb_support_resistance == 'resistance':
-        strength -= 0.15  # Strong sell if the Bollinger Band acts as resistance
+    # ### Bollinger Band (BB) Proximity and Support/Resistance ###
+    # if bb_support_resistance == 'support':
+    #     strength += 0.15  # Strong buy if the Bollinger Band acts as support
+    # elif bb_support_resistance == 'resistance':
+    #     strength -= 0.15  # Strong sell if the Bollinger Band acts as resistance
     
     # Boost the signal based on proximity to upper/lower Bollinger Bands
-    if bb_signal == 'upper_band':
+    if bb_signal == 'SELL':
         strength -= 0.1  # Selling pressure at upper Bollinger Band
-    elif bb_signal == 'lower_band':
+    elif bb_signal == 'BUY':
         strength += 0.1  # Buying pressure at lower Bollinger Band
 
     ### Spike Detection ###
@@ -384,7 +386,7 @@ class MyStrategy():
         self.rsi = bt.rsi(period=14)
         self.df = self.data  # Placeholder for DataFrame with price data
         
-    async def run(self):
+    async def run(self, tolerance):
         # 1. Calculate pivot points
         pivot_point_data = calculate_pivot_points(self.data)
 
@@ -404,11 +406,14 @@ class MyStrategy():
         # ma48_proximity = await is_price_near_ma(self.df, ma_period=48, tolerance=0.01)
         
         # 5. Check Bollinger Band signal
-        bb_signal = await is_price_near_bollinger_band(self.df, 0.03, 0.05)
-        bb_support_resistance = await is_bollinger_band_support_resistance(self.df)
-        ma_support_resistance  = await is_support_resistance(self.df, 10)
-        ma48_support_resistance  = await is_support_resistance(self.df, 48)
-        
+        bb_signal = await is_price_near_bollinger_band(self.df, tolerance, tolerance)
+        #bb_support_resistance = await is_bollinger_band_support_resistance(self.df)
+        #ma_support_resistance  = await is_price_near_ma(self.df, 10,)
+        #ma48_support_resistance  = await is_price_near_ma(self.df, 48)
+        ema_check = await check_ema(self.df, tolerance)
+        ma_support_resistance = await is_price_near_ma(self.df, tolerance, ma_period=10)
+        ma48_support_resistance = await is_price_near_ma(self.df, tolerance, ma_period=48)
+
         # 6. Calculate the signal strength
         signal_strength = calculate_signal_strength(
             self.df,
@@ -418,7 +423,7 @@ class MyStrategy():
             bb_signal,
             ma_support_resistance,
             ma48_support_resistance,
-            bb_support_resistance,
+            ema_check,
             spike_indices=spike_indices,
             current_index=current_index
         )

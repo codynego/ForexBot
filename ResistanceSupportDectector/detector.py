@@ -93,7 +93,7 @@ def ma_support_resistance(df, period, tolerance, min_touches=2, recent_window=3)
     return 'neutral'
 
 
-async def is_price_near_ma(df, tolerance, breakout_value, ma_period):
+async def is_price_near_ma(df, tolerance, ma_period):
     """
     Checks if the current price is within a tolerance of the MA and determines if the MA is acting as resistance or support.
     Args:
@@ -114,16 +114,26 @@ async def is_price_near_ma(df, tolerance, breakout_value, ma_period):
     # print("distance to moving average :", dist)
     # #print("=======================================")
 
-    if abs(price - ma) / ma <= tolerance:
+    # if (price - ma) / ma > tolerance / 2:
+    #     return None
+    #print("ma tolerance: ", (abs(price - ma) / ma) * 100)
+    # if abs(price - ma) / ma <= tolerance:
+    #     if price > ma:
+    #         return 'resistance'
+    #     else:
+    #         return 'support'
+    # else:
+    #     return None
+    if (abs(price - ma) / ma) * 100 <= tolerance:
         if price > ma:
-            return 'resistance'
+            return "BUY"
         else:
-            return 'support'
+            return "SELL"
     else:
         return None
 
 
-async def check_ema(df, tolerance, breakout_value, period=200):
+async def check_ema(df, tolerance, period=200):
     """
     Check if price is near EMA and if it's acting as support or resistance. If price breaks out beyond a threshold, signal will be False.
     Args:
@@ -141,12 +151,15 @@ async def check_ema(df, tolerance, breakout_value, period=200):
     # dist = distance_to_indicator(price, ema)
     # print("distance to ema :", dist)
     # #print("=======================================")
+    #print("ema tolerance: ", (abs(price - ema) / ema) * 100)
+    # if (price - ema) / ema > tolerance / 2:
+    #     return None
 
-    if abs(price - ema) / ema <= tolerance:
+    if (abs(price - ema) / ema) * 100 <= tolerance:
         if price > ema:
-            return 'resistance'
+            return "BUY"
         else:
-            return 'support'
+            return "SELL"
     else:
         return None
 
@@ -282,13 +295,26 @@ async def is_price_near_bollinger_band(df, high_tol, low_tol, period=20, std_dev
     last_price = df['close'].iloc[-1]
     upper_band_value = df['BB_High'].iloc[-1]
     lower_band_value = df['BB_Low'].iloc[-1]
-
-    if abs(last_price - upper_band_value) <= high_tol * upper_band_value:
-        return 'upper_band'
-    elif abs(last_price - lower_band_value) <= low_tol * lower_band_value:
-        return 'lower_band'
+    #print("upper band tolerance: ", (abs(last_price - upper_band_value) / upper_band_value) * 100)
+    #print("lower band tolerance: ", (abs(last_price - lower_band_value) / lower_band_value) * 100)
+    if (last_price - upper_band_value) / upper_band_value > high_tol / 2 or (lower_band_value - last_price) / lower_band_value > low_tol / 2:
+        return "neutral"
+    
+    upper_tolerance = (abs(last_price - upper_band_value) / upper_band_value) * 100
+    lower_tolerance = (abs(last_price - lower_band_value) / lower_band_value) * 100
+    #if upper_tolerance < lower_tolerance:
+    if upper_tolerance <= high_tol or lower_tolerance <= low_tol:
+        if last_price > upper_band_value or last_price < lower_band_value:
+            return "BUY"
+        else:
+            return "SELL"
     else:
-        return 'neutral'
+        return None
+    #     return 'upper_band'
+    # elif abs(last_price - lower_band_value) <= low_tol * lower_band_value:
+    #     return 'lower_band'
+    # else:
+    #     return 'neutral'
 
 def distance_to_indicator(current_price, indicator_value):
     """
