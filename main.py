@@ -88,15 +88,15 @@ async def main():
         connect, api = await bot.connect_deriv(app_id="1089")
         response = await api.ping({"ping": 1})
 
-        while not response['ping'] or retry_attempts < max_retries or not connect:
+        while not connect or retry_attempts < max_retries or not connect:
             print(f"Retrying to connect... attempt {retry_attempts + 1}")
             await asyncio.sleep(120)
             retry_attempts += 1
             connect, api = await bot.connect_deriv(app_id="1089")
         
-        if retry_attempts >= max_retries:
-            logging.error("Max retries exceeded. Could not reconnect.")
-            return None
+            if retry_attempts >= max_retries:
+                logging.error("Max retries exceeded. Could not reconnect.")
+                return None
         
         print("Reconnected successfully")
         glo_connect = connect
