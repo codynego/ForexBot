@@ -201,13 +201,13 @@ class Strategy:
         ma10_tol = ma48_tol = ema_tol = high_tol = low_tol = tolerance / 2
 
         # Fetch indicators
-        ema_behavior = await check_ema(df, period=200, tolerance=float(ema_tol), breakout_value=breakout_threshold)
+        ema_behavior = await check_ema(df, period=200, tolerance=float(ema_tol))
         bb_behavior = await is_bollinger_band_support_resistance(df)
         price_near_bb = await is_price_near_bollinger_band(df, float(high_tol), float(low_tol))
 
         # Additional checks for proximity to MAs with breakout consideration
-        price_near_ma48 = await is_price_near_ma(df, float(ma48_tol), breakout_threshold, ma_period=48)
-        price_near_ma10 = await is_price_near_ma(df, float(ma10_tol), breakout_threshold, ma_period=10)
+        price_near_ma48 = await is_price_near_ma(df, float(ma48_tol), ma_period=48)
+        price_near_ma10 = await is_price_near_ma(df, float(ma10_tol), ma_period=10)
 
         # Detect spikes
         spike_detected = await detect_spikes(df)

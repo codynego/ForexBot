@@ -32,14 +32,14 @@ async def run_bot(api) -> None:
 
             
             #Skip unwanted signals based on market type
-            if signal['symbol'].startswith("BOOM") and signal["type"].count("SELL") > 1:
-                continue
-            elif signal['symbol'].startswith("CRASH") and signal["type"].count("BUY") > 1:
-                continue
-            elif signal["type"].count("HOLD") > 1:
-                continue
-            elif signal["type"].count("BUY") == 1 and signal["type"].count("SELL") == 1:
-                continue
+            # if signal['symbol'].startswith("BOOM") and signal["type"].count("SELL") > 1:
+            #     continue
+            # elif signal['symbol'].startswith("CRASH") and signal["type"].count("BUY") > 1:
+            #     continue
+            # elif signal["type"].count("HOLD") > 1:
+            #     continue
+            # elif signal["type"].count("BUY") == 1 and signal["type"].count("SELL") == 1:
+            #     continue
 
             # Send signal to Telegram
             print(bot.signal_toString(signal))
@@ -51,42 +51,7 @@ async def run_bot(api) -> None:
 
 
 
-async def ping_api(api):
-    
-    try:
-        response = await api.ping({"ping": 1})
-        if response['ping']:
-            print(response['ping'])
-    except Exception as e:
-        logging.error("Ping failed: %s. Attempting to reconnect...", str(e))
-        connect, api = await reconnect()  # type: ignore # Trigger reconnection on failure
-        if connect:
-            logging.info("Reconnected successfully after ping failure.")
-            await ping_api(api)  # Retry ping after reconnecting
-        else:
-            logging.error("Reconnection failed after ping failure.")
 
-
-
-async def reconnect():
-    retry_attempts = 0
-    max_retries = 5
-    connect, api = await bot.connect_deriv(app_id="1089")
-    response = await api.ping({"ping": 1})
-
-    while not response['ping'] or retry_attempts < max_retries or not connect:
-        print(f"Retrying to connect... attempt {retry_attempts + 1}")
-        await asyncio.sleep(300)
-        retry_attempts += 1
-        connect, api = await bot.connect_deriv(app_id="1089")
-    
-    if retry_attempts >= max_retries:
-        logging.error("Max retries exceeded. Could not reconnect.")
-        return
-    
-    print("Reconnected successfully")
-    await ping_api(api)
-    return connect, api
 
 
 async def run_bot_wrapper(api):
@@ -97,24 +62,56 @@ async def run_bot_wrapper(api):
 
 
 async def main():
-    connect, api = await bot.connect_deriv(app_id="1089")
-    response = await api.ping({"ping": 1})
-    if response['ping']:
-        print(response)
+    glo_connect, global_api = await bot.connect_deriv(app_id="1089")
+    # #response = await api.ping({"ping": 1})
+    # if response['ping']:
+    #     print(response)
 
-    try_count = 0
+    async def ping_api(api):
+        try:
+            response = await api.ping({"ping": 1})
+            if response['ping']:
+                print(response['ping'])
+            global_api = api
+        except Exception as e:
+            logging.error("Ping failed: %s. Attempting to reconnect...", str(e))
+            connect, api = await reconnect()  # type: ignore # Trigger reconnection on failure
+            if connect:
+                logging.info("Reconnected successfully after ping failure.")
+                await ping_api(api)  # Retry ping after reconnecting
+            else:
+                logging.error("Reconnection failed after ping failure.")
+        
+    async def reconnect():
+        retry_attempts = 0
+        max_retries = 5
+        connect, api = await bot.connect_deriv(app_id="1089")
+        response = await api.ping({"ping": 1})
+
+        while not response['ping'] or retry_attempts < max_retries or not connect:
+            print(f"Retrying to connect... attempt {retry_attempts + 1}")
+            await asyncio.sleep(120)
+            retry_attempts += 1
+            connect, api = await bot.connect_deriv(app_id="1089")
+        
+        if retry_attempts >= max_retries:
+            logging.error("Max retries exceeded. Could not reconnect.")
+            return None
+        
+        print("Reconnected successfully")
+        glo_connect = connect
+        global_api = api
+        await ping_api(global_api)
+
 
     # Retry connecting if failed initially
-    while not connect or not response['ping']:
-        if try_count >= Config.CONNECTION_TIMEOUT:
-            print("Failed to connect! Exceeded retry attempts.")
-            raise Exception("Bot not initialized")
-
-        print("Failed to initialize trading bot. Retrying in 3 seconds...")
-        await asyncio.sleep(3)
-        try_count += 1
-        connect, api = await bot.connect_deriv(app_id="1089")
-
+    while not glo_connect:
+        reconnect_result = await reconnect()
+        if reconnect_result is None:
+            logging.error("Failed to reconnect after initial connection failure.")
+            return
+        glo_connect, global_api = reconnect_result if reconnect_result else (None, None)
+        
     print("Bot connected successfully!")
 
 
@@ -122,10 +119,10 @@ async def main():
     scheduler = AsyncIOScheduler(timezone=utc)
     
     # Schedule pings every 30 seconds
-    scheduler.add_job(ping_api, 'interval', minutes=1, args=[api])
+    scheduler.add_job(ping_api, 'interval', minutes=1, args=[global_api])
     
     # Schedule bot to run every 15 minutes
-    scheduler.add_job(run_bot_wrapper, 'interval', minutes=15, args=[api])
+    scheduler.add_job(run_bot_wrapper, 'interval', minutes=15, args=[global_api])
     
     scheduler.start()
 
