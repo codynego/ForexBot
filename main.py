@@ -43,7 +43,7 @@ async def run_bot(api) -> None:
 
             # Send signal to Telegram
             print(bot.signal_toString(signal))
-            print("=============================")
+            print("============================")
             await send_telegram_message(Config.TELEGRAM_BOT_TOKEN, Config.TELEGRAM_CHANNEL_ID, bot.signal_toString(signal))
             logging.info("Signal: %s", bot.signal_toString(signal))
     except Exception as e:
