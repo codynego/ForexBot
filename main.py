@@ -59,7 +59,7 @@ LAST_RESET_TIME = datetime.now()
 async def send_message(token, message):
     global FREE_SIGNAL_COUNT, LAST_RESET_TIME
 
-    free_channel = Config.TELEGRAM_CHANNEL_ID
+    free_channel = Config.TELEGRAM_FREE_CHANNEL_ID
     premium_channel = Config.TELEGRAM_CHANNEL_ID
 
     # Check if 24 hours have passed since the last reset
