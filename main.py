@@ -9,6 +9,7 @@ from telegram.ext import ApplicationBuilder, CommandHandler
 from bot import TradingBot
 from config import Config
 from telebot import send_telegram_message, start
+import random
 
 # Initialize bot with credentials from config
 bot = TradingBot(Config.MT5_LOGIN, Config.MT5_PASSWORD, Config.MT5_SERVER)
@@ -44,13 +45,35 @@ async def run_bot(api) -> None:
             # Send signal to Telegram
             print(bot.signal_toString(signal))
             print("============================")
-            await send_telegram_message(Config.TELEGRAM_BOT_TOKEN, Config.TELEGRAM_CHANNEL_ID, bot.signal_toString(signal))
+            await send_message(Config.TELEGRAM_BOT_TOKEN, bot.signal_toString(signal))
+            #await send_telegram_message(Config.TELEGRAM_BOT_TOKEN, Config.TELEGRAM_CHANNEL_ID, bot.signal_toString(signal))
             logging.info("Signal: %s", bot.signal_toString(signal))
     except Exception as e:
         logging.error("Run bot failed: %s", str(e))
 
 
+# Global variables to keep track of free signal count and reset time
+FREE_SIGNAL_COUNT = 0
+LAST_RESET_TIME = datetime.now()
 
+async def send_message(token, message):
+    global FREE_SIGNAL_COUNT, LAST_RESET_TIME
+
+    free_channel = Config.TELEGRAM_CHANNEL_ID
+    premium_channel = Config.TELEGRAM_CHANNEL_ID
+
+    # Check if 24 hours have passed since the last reset
+    if datetime.now() - LAST_RESET_TIME >= timedelta(hours=24):
+        FREE_SIGNAL_COUNT = 0
+        LAST_RESET_TIME = datetime.now()
+
+    try:
+        await send_telegram_message(token, premium_channel, message)
+        if FREE_SIGNAL_COUNT < 3 and random.choices([True, False], weights=[1, 3])[0]:
+            await send_telegram_message(token, free_channel, message)
+            FREE_SIGNAL_COUNT += 1
+    except Exception as e:
+        logging.error("Error sending message to telegram: %s", str(e))
 
 
 

@@ -24,8 +24,8 @@ async def detect_spikes(df, threshold=0.02, lookback=5):
 
     # Determine spike conditions
     if last_pct_change > threshold:
-        return "spike_up"
+        return "BUY"
     elif last_pct_change < -threshold:
-        return "spike_down"
+        return "SELL"
     else:
         return "no_spike"

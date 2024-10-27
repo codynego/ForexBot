@@ -219,7 +219,7 @@ class Strategy:
             price_near_ma48 == 'BUY',
             ema_behavior == 'BUY',
             price_near_bb == 'BUY',
-            #spike_detected == "spike_up"  # Spike down detected, consider buying
+            #spike_detected == "BUY"  # Spike down detected, consider buying
         ]
         sell_conditions = [
             price_near_ma10 == 'SELL',

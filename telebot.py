@@ -27,25 +27,25 @@ async def start(update: Update, context: CallbackContext):
 
 async def send_telegram_message(bot_token, channel_id, signal):
     bot = telegram.Bot(token=bot_token)
-    text = f"New signal received: {signal}"
+    text = f"New signal from DonVick {signal}"
     await bot.send_message(chat_id=channel_id, text=text)
 
 from telegram import Bot
 async def main():
-    channel_id = -1002265016206
+    channel_id = "@donvickbot"
 
     bot = Bot(token=Config.TELEGRAM_BOT_TOKEN)
     await bot.send_message(chat_id=channel_id, text="hello")
-    updates = await bot.get_updates()
+    #updates = await bot.get_updates()
     
-    user_chat_ids = set()
-    for update in updates:
-        if update.message:
-            user_chat_ids.add(update.message.chat_id)
+    # user_chat_ids = set()
+    # for update in updates:
+    #     if update.message:
+    #         user_chat_ids.add(update.message.chat_id)
     
-    print("Bot Subscribers:")
-    for chat_id in user_chat_ids:
-        print(f"Chat ID: {chat_id}")
+    # print("Bot Subscribers:")
+    # for chat_id in user_chat_ids:
+    #     print(f"Chat ID: {chat_id}")
 # print bot users
 
 if __name__ == "__main__":
