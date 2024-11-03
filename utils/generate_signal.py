@@ -49,27 +49,22 @@ async def get_signal(df, tolerance, breakout_threshold, ma_periods=(10, 48), ema
         resistance = df['Resistance'].iloc[-1]
         
 
-        bullish_breakout = df['Bullish Breakout'].iloc[-1]
-        bearish_breakout = df['Bearish Breakout'].iloc[-1]
+        # bullish_breakout = df['Bullish Breakout'].iloc[-1]
+        # bearish_breakout = df['Bearish Breakout'].iloc[-1]
         #print("bullish:", bullish_breakout, "- bearish:", bearish_breakout)
 
         distance = abs(price - indicator_val) / indicator_val * 100
+        bullish_breakout = distance > breakout_threshold and price > indicator_val
+        bearish_breakout = distance > breakout_threshold and price < indicator_val
         if distance <= tolerance:
-            if price < indicator_val and not (bearish_breakout):
-                return 'support'
-            elif price > indicator_val and not (bullish_breakout):
+            if price < indicator_val and not (bullish_breakout):
                 return 'resistance'
-        # elif distance > breakout_threshold :
-        #     return 'breakout_buy' if price > indicator_val else 'breakout_sell'
+            elif price > indicator_val and not (bearish_breakout):
+                return 'support'
+        # elif distance > breakout_threshold:
+        #     return 'support' if price > indicator_val else 'resistance'
         return None
 
-    #     if (abs(price - support) / support <= tolerance) and not (bearish_breakout):
-    #         return 'support'
-    
-    # # Check proximity to resistance
-    #     elif (abs(price - resistance) / resistance <= tolerance) and not (bullish_breakout):
-    #         return 'resistance'
-    # Get the latest price and signals
     latest_price = df['close'].iloc[-1]
     signals = {'buy': 0, 'sell': 0, 'breakout_buy': 0, 'breakout_sell': 0}
 

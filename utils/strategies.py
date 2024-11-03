@@ -169,7 +169,7 @@ class Strategy:
         task2 = []
         for df, tol in zip(dataframes, ai_tolerance):
             strategy = MyStrategy(df)
-            task2.append(asyncio.create_task(get_signal(df, tol, breakout_threshold=min(tol) / 2)))
+            task2.append(asyncio.create_task(get_signal(df, tol, breakout_threshold=min(tol) / 4)))
             #task2.append(asyncio.create_task(cls.runStrategy(df, tol, breakout_threshold)))
             tasks.append(asyncio.create_task(compute(df, min(tol))))
             # market_strength = compute(df, min(tol))
