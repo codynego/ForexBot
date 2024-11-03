@@ -125,7 +125,7 @@ async def ping_api():
 async def schedule_jobs():
     scheduler = AsyncIOScheduler(timezone=utc)
     scheduler.add_job(ping_api, 'interval', minutes=1)
-    scheduler.add_job(run_bot, 'interval', minutes=1)
+    scheduler.add_job(run_bot, 'interval', minutes=15)
     scheduler.start()
 
 async def main():
