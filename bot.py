@@ -106,16 +106,18 @@ class TradingBot:
 
     async def generate_signal(self, data, strategy="rsistrategy", symbol=None):
         price = data[0]['close'].iloc[-1] # type: ignore
-        signal = {"symbol": symbol, "price": price, "type": None, "strength": None}
-
+        # signal = {"symbol": symbol, "price": price, "type": None, "strength": None, "confidence" : None}
+        signal = {"symbol": symbol, "price": price, "type": None, "strength": None,}
         if strategy == "rsistrategy":
             # stra = Strategy.rsiStrategy(data)
             result = await Strategy.process_multiple_timeframes(data, symbol)
+            
             if result is None:
                 return None
-            stra, strength, all_signals = result
+            stra, strength, all_signals, confidence = result
      
             signal["strength"] = round(strength, 2)
+            # signal['confidence'] = confidence
             
             #print(all_signals)
             if stra == 1:
@@ -141,13 +143,15 @@ class TradingBot:
                 
             # # Update cache
             # self.signals_cache[signal_key] = signal
+            
             return signal
             
 
     async def process_multiple_signals(self, data_list, market_list):
             # run signals concurretly
-            signals = await asyncio.gather(*(self.generate_signal(data, symbol=market) for data, market in zip(data_list, market_list)))
+            signals = await asyncio.gather(*(self.generate_signal(data, symbol=market) for data, market in zip(data_list, market_list)), return_exceptions=True)
             return signals
+
 
     # async def save_to_database(self, model, symbol, data):
     #     if model == "Market":
@@ -193,4 +197,5 @@ class TradingBot:
     def signal_toString(self, signal):
         if signal is None:
             return None
-        return f"\nSymbol: {signal['symbol']}\nPrice: {signal['price']}\nType: {signal['type']}\nStrength: {signal['strength']}"
+        return f"\nSymbol: {signal['symbol']}\nPrice: {signal['price']}\nType: {signal['type']}\nStrength: {signal['strength']}\n"
+        # return f"\nSymbol: {signal['symbol']}\nPrice: {signal['price']}\nType: {signal['type']}\nStrength: {signal['strength']}\nConfidence: {signal['confidence']}"

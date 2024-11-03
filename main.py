@@ -14,45 +14,9 @@ import random
 # Initialize bot with credentials from config
 bot = TradingBot(Config.MT5_LOGIN, Config.MT5_PASSWORD, Config.MT5_SERVER)
 
-async def run_bot(api) -> None:
-    try:
-        print("Fetching data...")
-        timezone = pytz.timezone("Etc/UTC")
-        end_time = datetime.now(tz=timezone)
-        start_time = end_time - timedelta(minutes=4800)
-        
-        # Fetch market data
-        data = await bot.fetch_data_for_multiple_markets(api, Config.MARKETS_LIST)
-        
-        # Process multiple signals
-        signals = await bot.process_multiple_signals(data, Config.MARKETS_LIST)
-        
-        for signal in signals:
-            if signal is None or signal["type"] == "HOLD":
-                continue
-
-            
-            # #Skip unwanted signals based on market type
-            if signal['symbol'].startswith("BOOM") and signal["type"].count("SELL") > 1:
-                continue
-            elif signal['symbol'].startswith("CRASH") and signal["type"].count("BUY") > 1:
-                continue
-            elif signal["type"].count("HOLD") > 1:
-                continue
-            elif signal["type"].count("BUY") == 1 and signal["type"].count("SELL") == 1:
-                continue
-
-            # Send signal to Telegram
-            print(bot.signal_toString(signal))
-            print("============================")
-            await send_message(Config.TELEGRAM_BOT_TOKEN, bot.signal_toString(signal))
-            #await send_telegram_message(Config.TELEGRAM_BOT_TOKEN, Config.TELEGRAM_CHANNEL_ID, bot.signal_toString(signal))
-            logging.info("Signal: %s", bot.signal_toString(signal))
-    except Exception as e:
-        logging.error("Run bot failed: %s", str(e))
-
-
-# Global variables to keep track of free signal count and reset time
+# Global variables for connection and API
+connection = None
+new_api = None
 FREE_SIGNAL_COUNT = 0
 LAST_RESET_TIME = datetime.now()
 
@@ -61,6 +25,7 @@ async def send_message(token, message):
 
     free_channel = Config.TELEGRAM_FREE_CHANNEL_ID
     premium_channel = Config.TELEGRAM_CHANNEL_ID
+    backtest = Config.BACKTEST_ID
 
     # Check if 24 hours have passed since the last reset
     if datetime.now() - LAST_RESET_TIME >= timedelta(hours=24):
@@ -68,99 +33,121 @@ async def send_message(token, message):
         LAST_RESET_TIME = datetime.now()
 
     try:
-        await send_telegram_message(token, premium_channel, message)
+        await send_telegram_message(token, backtest, message)
+        #await send_telegram_message(token, premium_channel, message)
         if FREE_SIGNAL_COUNT < 3 and random.choices([True, False], weights=[1, 3])[0]:
-            await send_telegram_message(token, free_channel, message)
+            #await send_telegram_message(token, free_channel, message)
             FREE_SIGNAL_COUNT += 1
     except Exception as e:
         logging.error("Error sending message to telegram: %s", str(e))
 
 
 
-async def run_bot_wrapper(api):
-    # try:
-        await run_bot(api)
+async def reconnect():
+    global connection, new_api
+    retry_attempts = 0
+    max_retries = 5
+
+    while retry_attempts < max_retries:
+        try:
+            connection, new_api = await bot.connect_deriv(app_id="1089")
+            if connection:
+                response = await new_api.ping({"ping": 1})
+                if response['ping']:
+                    logging.info("Reconnected successfully.")
+                    return
+        except Exception as e:
+            logging.error(f"Reconnect attempt {retry_attempts + 1} failed: {e}")
+            retry_attempts += 1
+            await asyncio.sleep(10)
+
+    logging.error("Max retries exceeded. Could not reconnect.")
+    return
+
+async def run_bot():
+    global connection, new_api
+    
+    if not new_api:
+        logging.error("API not connected. Attempting to reconnect...")
+        await reconnect()
+    if new_api:
+        print("Fetching data...")
+        data = await bot.fetch_data_for_multiple_markets(new_api, Config.MARKETS_LIST)
+        signals = await bot.process_multiple_signals(data, Config.MARKETS_LIST)
+        # print(signals)
+        for signal in signals:
+            if signal is None:
+                continue
+            # #Skip unwanted signals based on market type
+            if signal['symbol'].startswith("BOOM") and signal["type"].count("SELL") > 1: # type: ignore
+                continue
+            elif signal['symbol'].startswith("CRASH") and signal["type"].count("BUY") > 1: # type: ignore
+                continue
+            elif signal["type"].count("HOLD") > 1: # type: ignore
+                continue
+            elif signal["type"].count("BUY") == 1 and signal["type"].count("SELL") == 1: # type: ignore
+                continue
+            elif signal["type"] == "HOLD": # type: ignore
+                continue
+            
+
+            # Send signal to Telegram
+            print(bot.signal_toString(signal))
+            print("============================")
+            await send_message(Config.TELEGRAM_BOT_TOKEN, bot.signal_toString(signal))
+            #await send_telegram_message(Config.TELEGRAM_BOT_TOKEN, Config.TELEGRAM_CHANNEL_ID, bot.signal_toString(signal))
+            
+            logging.info("Signal: %s", bot.signal_toString(signal))
     # except Exception as e:
     #     logging.error("Run bot failed: %s", str(e))
+    #     await reconnect()
+    #     if connection:
+    #         await run_bot()
+    #     else:
+    #         logging.error("failed to run bot: %s", str(e))
+    #         return
 
-
-async def main():
-    glo_connect, global_api = await bot.connect_deriv(app_id="1089")
-    # #response = await api.ping({"ping": 1})
-    # if response['ping']:
-    #     print(response)
-
-    async def ping_api(api):
-        try:
-            response = await api.ping({"ping": 1})
+async def ping_api():
+    global connection, new_api
+    try:
+        if new_api is not None:
+            response = await new_api.ping({"ping": 1})
             if response['ping']:
                 print(response['ping'])
-            global_api = api
-        except Exception as e:
-            logging.error("Ping failed: %s. Attempting to reconnect...", str(e))
-            connect, api = await reconnect()  # type: ignore # Trigger reconnection on failure
-            if connect:
-                logging.info("Reconnected successfully after ping failure.")
-                await ping_api(api)  # Retry ping after reconnecting
-            else:
-                logging.error("Reconnection failed after ping failure.")
-        
-    async def reconnect():
-        retry_attempts = 0
-        max_retries = 5
-        connect, api = await bot.connect_deriv(app_id="1089")
-        response = await api.ping({"ping": 1})
+        else:
+            logging.error("new_api is None, cannot ping.")
+    except Exception as e:
+        logging.error("Ping error: %s. Attempting to reconnect...", str(e))
+        await reconnect()
+        if connection:
+            await ping_api()
 
-        while not connect or retry_attempts < max_retries or not connect:
-            print(f"Retrying to connect... attempt {retry_attempts + 1}")
-            await asyncio.sleep(120)
-            retry_attempts += 1
-            connect, api = await bot.connect_deriv(app_id="1089")
-        
-            if retry_attempts >= max_retries:
-                logging.error("Max retries exceeded. Could not reconnect.")
-                return None
-        
-        print("Reconnected successfully")
-        glo_connect = connect
-        global_api = api
-        await ping_api(global_api)
-
-
-    # Retry connecting if failed initially
-    while not glo_connect:
-        reconnect_result = await reconnect()
-        if reconnect_result is None:
-            logging.error("Failed to reconnect after initial connection failure.")
-            return
-        glo_connect, global_api = reconnect_result if reconnect_result else (None, None)
-        
-    print("Bot connected successfully!")
-
-
-    # Create an AsyncIO scheduler for periodic tasks
+async def schedule_jobs():
     scheduler = AsyncIOScheduler(timezone=utc)
-    
-    # Schedule pings every 30 seconds
-    scheduler.add_job(ping_api, 'interval', minutes=1, args=[global_api])
-    
-    # Schedule bot to run every 15 minutes
-    scheduler.add_job(run_bot_wrapper, 'interval', minutes=15, args=[global_api])
-    
+    scheduler.add_job(ping_api, 'interval', minutes=1)
+    scheduler.add_job(run_bot, 'interval', minutes=1)
     scheduler.start()
 
-    # Keep the bot running
+async def main():
+    global connection, new_api
+    connection, new_api = await bot.connect_deriv(app_id="1089")
+
+    if not connection:
+        await reconnect()
+
+    if connection:
+        print("Bot connected")
+        await new_api.ping({"ping": 1})
+        await schedule_jobs()
+
     while True:
         await asyncio.sleep(1)
 
-
 if __name__ == "__main__":
     try:
-        # Run the main function using asyncio
         asyncio.run(main())
 
         # Telegram Bot Setup
-
         BOT_TOKEN = Config.TELEGRAM_BOT_TOKEN
         app = ApplicationBuilder().token(BOT_TOKEN).build()
 

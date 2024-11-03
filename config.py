@@ -26,6 +26,7 @@ class Config:
     TELEGRAM_CHAT_ID = os.environ['TELEGRAM_CHAT_ID']
     TELEGRAM_CHANNEL_ID = os.environ['TELEGRAM_CHANNEL_ID']
     TELEGRAM_FREE_CHANNEL_ID = os.environ['FREE_TELEGRAM_CHANNEL_ID']
+    BACKTEST_ID = os.environ['BACKTEST_ID']
 
     #MARKETS_LIST = ["Boom 1000 Index", "Crash 1000 Index"]
     MARKETS_LIST = ["CRASH1000", "BOOM1000", "BOOM500", "CRASH500"]
