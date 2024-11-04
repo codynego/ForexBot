@@ -66,46 +66,46 @@ async def reconnect():
 
 async def run_bot():
     global connection, new_api
-    
-    if not new_api:
-        logging.error("API not connected. Attempting to reconnect...")
-        await reconnect()
-    if new_api:
-        print("Fetching data...")
-        data = await bot.fetch_data_for_multiple_markets(new_api, Config.MARKETS_LIST)
-        signals = await bot.process_multiple_signals(data, Config.MARKETS_LIST)
-        # print(signals)
-        for signal in signals:
-            if signal is None:
-                continue
-            #Skip unwanted signals based on market type
-            if signal['symbol'].startswith("BOOM") and signal["type"].count("SELL") > 1: # type: ignore
-                continue
-            elif signal['symbol'].startswith("CRASH") and signal["type"].count("BUY") > 1: # type: ignore
-                continue
-            elif signal["type"].count("HOLD") > 1: # type: ignore
-                continue
-            elif signal["type"].count("BUY") == 1 and signal["type"].count("SELL") == 1: # type: ignore
-                continue
-            elif signal["type"] == "HOLD": # type: ignore
-                continue
-            
+    try:
+        if not new_api:
+            logging.error("API not connected. Attempting to reconnect...")
+            await reconnect()
+        if new_api:
+            print("Fetching data...")
+            data = await bot.fetch_data_for_multiple_markets(new_api, Config.MARKETS_LIST)
+            signals = await bot.process_multiple_signals(data, Config.MARKETS_LIST)
+            # print(signals)
+            for signal in signals:
+                if signal is None:
+                    continue
+                #Skip unwanted signals based on market type
+                if signal['symbol'].startswith("BOOM") and signal["type"].count("SELL") > 1: # type: ignore
+                    continue
+                elif signal['symbol'].startswith("CRASH") and signal["type"].count("BUY") > 1: # type: ignore
+                    continue
+                elif signal["type"].count("HOLD") > 1: # type: ignore
+                    continue
+                elif signal["type"].count("BUY") == 1 and signal["type"].count("SELL") == 1: # type: ignore
+                    continue
+                elif signal["type"] == "HOLD": # type: ignore
+                    continue
+                
 
-            # Send signal to Telegram
-            print(bot.signal_toString(signal))
-            print("============================")
-            await send_message(Config.TELEGRAM_BOT_TOKEN, bot.signal_toString(signal))
-            #await send_telegram_message(Config.TELEGRAM_BOT_TOKEN, Config.TELEGRAM_CHANNEL_ID, bot.signal_toString(signal))
-            
-            logging.info("Signal: %s", bot.signal_toString(signal))
-    # except Exception as e:
-    #     logging.error("Run bot failed: %s", str(e))
-    #     await reconnect()
-    #     if connection:
-    #         await run_bot()
-    #     else:
-    #         logging.error("failed to run bot: %s", str(e))
-    #         return
+                # Send signal to Telegram
+                print(bot.signal_toString(signal))
+                print("============================")
+                #await send_message(Config.TELEGRAM_BOT_TOKEN, bot.signal_toString(signal))
+                #await send_telegram_message(Config.TELEGRAM_BOT_TOKEN, Config.TELEGRAM_CHANNEL_ID, bot.signal_toString(signal))
+                
+                logging.info("Signal: %s", bot.signal_toString(signal))
+    except Exception as e:
+        logging.error("Run bot failed: %s", str(e))
+        await reconnect()
+        if connection:
+            await run_bot()
+        else:
+            logging.error("failed to run bot: %s", str(e))
+            return
 
 async def ping_api():
     global connection, new_api

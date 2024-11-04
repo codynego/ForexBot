@@ -42,28 +42,45 @@ async def get_signal(df, tolerance, breakout_threshold, ma_periods=(10, 48), ema
     df['Bearish Breakout'] = df['close'] < df['Support'].shift()
 
     # Define support/resistance and breakout checks for each indicator
-    def check_level(df, indicator_val, tolerance, breakout_threshold):
-        """Returns support/resistance, breakout, or None based on tolerance and breakout conditions."""
+    def check_level(df, indicator_val, tolerance, breakout_threshold, lookback=5):
+        """
+        Determines if the current price level acts as support, resistance, breakout, or continuation,
+        based on tolerance, breakout conditions, and recent price behavior.
+
+        Args:
+            df: DataFrame with market data (including 'close' prices).
+            indicator_val: The indicator value to check against (e.g., support or resistance level).
+            tolerance: Tolerance percentage to consider price near an indicator.
+            breakout_threshold: Percentage distance to consider a breakout.
+            lookback: Number of recent candles to check for repeated touches on the indicator.
+
+        Returns:
+            str: 'support', 'resistance', 'breakout', 'continuation', or None.
+        """
         price = df['close'].iloc[-1]
-        support = df['Support'].iloc[-1]
-        resistance = df['Resistance'].iloc[-1]
-        
-
-        # bullish_breakout = df['Bullish Breakout'].iloc[-1]
-        # bearish_breakout = df['Bearish Breakout'].iloc[-1]
-        #print("bullish:", bullish_breakout, "- bearish:", bearish_breakout)
-
+        recent_prices = df['close'].iloc[-lookback:]
         distance = abs(price - indicator_val) / indicator_val * 100
+
+        # Check for breakout conditions
         bullish_breakout = distance > breakout_threshold and price > indicator_val
         bearish_breakout = distance > breakout_threshold and price < indicator_val
+
+        # Determine if recent candles have touched the indicator, suggesting continuation
+        touches = (abs(recent_prices - indicator_val) / indicator_val * 100 <= tolerance / 2).sum()
+        is_continuation = touches >= lookback
+
         if distance <= tolerance:
-            if price < indicator_val and not (bullish_breakout):
+            # Valid support or resistance if no breakout or continuation
+            if price < indicator_val and not bullish_breakout and not is_continuation:
                 return 'resistance'
-            elif price > indicator_val and not (bearish_breakout):
+            elif price > indicator_val and not bearish_breakout and not is_continuation:
                 return 'support'
         # elif distance > breakout_threshold:
-        #     return 'support' if price > indicator_val else 'resistance'
+        #     # Signal breakout if beyond the threshold
+        #     return 'breakout' if price > indicator_val else 'continuation' if is_continuation else 'none'
+        
         return None
+
 
     latest_price = df['close'].iloc[-1]
     signals = {'buy': 0, 'sell': 0, 'breakout_buy': 0, 'breakout_sell': 0}
