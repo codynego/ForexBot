@@ -94,7 +94,7 @@ async def run_bot():
                 # Send signal to Telegram
                 print(bot.signal_toString(signal))
                 print("============================")
-                #await send_message(Config.TELEGRAM_BOT_TOKEN, bot.signal_toString(signal))
+                await send_message(Config.TELEGRAM_BOT_TOKEN, bot.signal_toString(signal))
                 #await send_telegram_message(Config.TELEGRAM_BOT_TOKEN, Config.TELEGRAM_CHANNEL_ID, bot.signal_toString(signal))
                 
                 logging.info("Signal: %s", bot.signal_toString(signal))
