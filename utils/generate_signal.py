@@ -42,7 +42,7 @@ async def get_signal(df, tolerance, breakout_threshold, ma_periods=(10, 48), ema
     df['Bearish Breakout'] = df['close'] < df['Support'].shift()
 
     # Define support/resistance and breakout checks for each indicator
-    def check_level(df, indicator_val, tolerance, breakout_threshold, lookback=5):
+    def check_level(df, indicator_val, tolerance, breakout_threshold, lookback=3):
         """
         Determines if the current price level acts as support, resistance, breakout, or continuation,
         based on tolerance, breakout conditions, and recent price behavior.

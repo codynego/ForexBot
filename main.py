@@ -33,10 +33,10 @@ async def send_message(token, message):
         LAST_RESET_TIME = datetime.now()
 
     try:
-        await send_telegram_message(token, backtest, message)
-        #await send_telegram_message(token, premium_channel, message)
+        #await send_telegram_message(token, backtest, message)
+        await send_telegram_message(token, premium_channel, message)
         if FREE_SIGNAL_COUNT < 3 and random.choices([True, False], weights=[1, 3])[0]:
-            #await send_telegram_message(token, free_channel, message)
+            await send_telegram_message(token, free_channel, message)
             FREE_SIGNAL_COUNT += 1
     except Exception as e:
         logging.error("Error sending message to telegram: %s", str(e))
@@ -78,7 +78,7 @@ async def run_bot():
             for signal in signals:
                 if signal is None:
                     continue
-                #Skip unwanted signals based on market type
+                #Skip unwanted signa0ls based on market type
                 if signal['symbol'].startswith("BOOM") and signal["type"].count("SELL") > 1: # type: ignore
                     continue
                 elif signal['symbol'].startswith("CRASH") and signal["type"].count("BUY") > 1: # type: ignore
