@@ -204,8 +204,6 @@ class TradingBot:
         elif type == ['HOLD', 'SELL', 'SELL'] or type == ['HOLD', 'BUY', 'BUY']:
             entry = "Enter after 15mins"
             exit = "exit in 30 mins"
-        else:
-            entry = "immediately"
-            exit = "exit in 30 mins"
+      
         return f"\nSymbol: {signal['symbol']}\nPrice: {signal['price']}\nType: {signal['type']}\nStrength: {signal['strength']}\nEntry: {entry}\nExit: {exit}"
         # return f"\nSymbol: {signal['symbol']}\nPrice: {signal['price']}\nType: {signal['type']}\nStrength: {signal['strength']}\nConfidence: {signal['confidence']}"
