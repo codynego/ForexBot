@@ -29,7 +29,7 @@ class Config:
     BACKTEST_ID = os.environ['BACKTEST_ID']
 
     #MARKETS_LIST = ["Boom 1000 Index", "Crash 1000 Index"]
-    MARKETS_LIST = ["BOOM1000"]
+    MARKETS_LIST = ["BOOM1000", "BOOM500", "CRASH1000", "CRASH500"]
     # MARKETS_LIST = ["Boom 1000 Index", "Crash 1000 Index", "Boom 500 Index", "Crash 500 Index"]
     # TIME_FRAMES = [mt5.TIMEFRAME_M1, mt5.TIMEFRAME_M5, mt5.TIMEFRAME_M15]
 
