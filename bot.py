@@ -110,7 +110,7 @@ class TradingBot:
         signal = {"symbol": symbol, "price": price, "type": None, "strength": None,}
         if strategy == "rsistrategy":
             # stra = Strategy.rsiStrategy(data)
-            result = await Strategy.process_multiple_timeframes(data, symbol)
+            result = await Strategy.process_multiple_timeframes(data, symbol) # type: ignore
             
             if result is None:
                 return None
@@ -201,9 +201,13 @@ class TradingBot:
         if type == ['BUY', 'BUY', 'SELL'] or type == ['BUY', 'BUY', 'HOLD'] or type == ['SELL', 'SELL', 'BUY'] or type == ['SELL', 'SELL', 'HOLD']:
             entry = "immediately"
             exit = "after 1 spike or 30mins"
+            return f"\nSymbol: {signal['symbol']}\nPrice: {signal['price']}\nType: {signal['type']}\nStrength: {signal['strength']}\nEntry: {entry}\nExit: {exit}"
         elif type == ['HOLD', 'SELL', 'SELL'] or type == ['HOLD', 'BUY', 'BUY']:
             entry = "Enter after 15mins"
             exit = "exit in 30 mins"
+            return f"\nSymbol: {signal['symbol']}\nPrice: {signal['price']}\nType: {signal['type']}\nStrength: {signal['strength']}\nEntry: {entry}\nExit: {exit}"
+        else:
+            return f"\nSymbol: {signal['symbol']}\nPrice: {signal['price']}\nType: {signal['type']}\nStrength: {signal['strength']}"
       
-        return f"\nSymbol: {signal['symbol']}\nPrice: {signal['price']}\nType: {signal['type']}\nStrength: {signal['strength']}\nEntry: {entry}\nExit: {exit}"
+        
         # return f"\nSymbol: {signal['symbol']}\nPrice: {signal['price']}\nType: {signal['type']}\nStrength: {signal['strength']}\nConfidence: {signal['confidence']}"

@@ -36,7 +36,7 @@ async def send_message(token, message):
         #await send_telegram_message(token, backtest, message)
         await send_telegram_message(token, premium_channel, message)
         if FREE_SIGNAL_COUNT < 3 and random.choices([True, False], weights=[1, 3])[0]:
-            await send_telegram_message(token, free_channel, message)
+            #await send_telegram_message(token, free_channel, message)
             FREE_SIGNAL_COUNT += 1
     except Exception as e:
         logging.error("Error sending message to telegram: %s", str(e))
@@ -120,6 +120,7 @@ async def ping_api():
         logging.error("Ping error: %s. Attempting to reconnect...", str(e))
         await reconnect()
         if connection:
+            print("pinging")
             await ping_api()
 
 async def schedule_jobs():

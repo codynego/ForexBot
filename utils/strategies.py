@@ -105,8 +105,9 @@ class Strategy:
         #overall_volatility = calculate_overall_volatility_from_df(dataframes)
         #tolerance_adjusted = tolerance * (1 + overall_volatility)
         features = calculate_features(dataframes[0], dataframes[1], dataframes[2])
+        features2 = calculate_features2(dataframes[0], dataframes[1], dataframes[2])
         # path = 'C:/Users/Admin/codynego/mlforfinance/forexBot/Boom500_rf.pkl'
-        
+        #print(features2)
         model_paths = {
             "BOOM1000": 'newmodels/new_Boom1000_rf.pkl',
             "BOOM500": 'newmodels/new_Boom500_rf.pkl',
@@ -115,38 +116,35 @@ class Strategy:
         }
 
         # if symbol == "CRASH500":
-        #     pp = "newmodels/main_CRASH1000_rf.pkl"
-        #     conf_p = "newmodels/xgb_CRASH1000_rf.pkl"
-        #     mode = joblib.load(pp)
+        #     conf_p = "newmodels/nego_Crash500_rf.pkl"
+        #     #mode = joblib.load(pp)
+        #     conf_mode = joblib.load(conf_p)
+
+        #     mm = conf_mode.predict([features2])[0]
         #     conf_mode = joblib.load(conf_p)
         # elif symbol == "CRASH1000":
-        #     pp = "newmodels/main_CRASH1000_rf.pkl"
-        #     conf_p = "newmodels/xgb_CRASH1000_rf.pkl"
-        #     mode = joblib.load(pp)
+        #     conf_p = "newmodels/nego_Crash1000_rf.pkl"
+        #     #mode = joblib.load(pp)
         #     conf_mode = joblib.load(conf_p)
 
-        #     mm = conf_mode.predict(features)[0]
-        #     ss = mode.predict(features)[0]
+        #     mm = conf_mode.predict([features2])[0]
         # elif symbol == "BOOM1000":
-        #     pp = "newmodels/main_BOOM1000_rf.pkl"
-        #     conf_p = "newmodels/xgb_BOOM1000_rf.pkl"
-        #     mode = joblib.load(pp)
+        #     #pp = "newmodels/neg_BOOM1000_rf.pkl"
+        #     conf_p = "newmodels/nego_BOOM1000_rf.pkl"
+        #     #mode = joblib.load(pp)
         #     conf_mode = joblib.load(conf_p)
 
-        #     mm = conf_mode.predict(features)[0]
-        #     ss = mode.predict(features)[0]
+        #     mm = conf_mode.predict([features2])[0]
+        #     #ss = mode.predict(features)[0]
         # elif symbol == "BOOM500":
-        #     pp = "newmodels/main_BOOM500_rf.pkl"
-        #     conf_p = "newmodels/xgb_BOOM500_rf.pkl"
-
-        #     mode = joblib.load(pp)
+        #     conf_p = "newmodels/nego_BOOM500_rf.pkl"
+        #     #mode = joblib.load(pp)
         #     conf_mode = joblib.load(conf_p)
-            
-        #     mm = conf_mode.predict(features)[0]
-        #     ss = mode.predict(features)[0]
-        # if symbol not in model_paths:
-        #     print("Invalid symbol")
-        #     return None
+
+            #mm = conf_mode.predict([features2])[0]
+        if symbol not in model_paths:
+            print("Invalid symbol")
+            return None
 
         path = model_paths[symbol]
 
@@ -179,7 +177,8 @@ class Strategy:
         #print("new market: =================================" )
         result_signals = await asyncio.gather(*task2)  # Signals from runStrategy
         results = await asyncio.gather(*tasks)  # Signals from MyStrategy.run()
-        #print(results)
+        #print(ss)
+        #print(mm)
         # strength = np.interp(0.4, [0, 1], [0.4, 0.7])
         strength = sum(results) / len(results)
         #strengt, signal = await combine_timeframe_signals(results)
@@ -240,27 +239,13 @@ def calculate_volatility_from_df(df):
     return volatility
 import joblib
 
-def calculate_overall_volatility_from_df(dataframes, weights=(0.4, 0.3, 0.3)):
-    """
-    Calculate weighted overall volatility based on multiple timeframes.
-    
-    Args:
-        dataframes: List of DataFrames, each representing a different timeframe.
-        weights: Weights to assign to each timeframe.
-    
-    Returns:
-        The weighted overall market volatility.
-    """
-    m15_volatility = calculate_volatility_from_df(dataframes[0])
-    m30_volatility = calculate_volatility_from_df(dataframes[1])
-    h1_volatility = calculate_volatility_from_df(dataframes[2])
 
-    overall_volatility = (weights[0] * m15_volatility) + (weights[1] * m30_volatility) + (weights[2] * h1_volatility)
-    return overall_volatility
 
 
 
 import pandas as pd
+from sklearn.preprocessing import StandardScaler
+
 
 def calculate_features(m5_data, m15_data, h1_data):
     # Calculate indicators for M5 timeframe
@@ -294,6 +279,7 @@ def calculate_features(m5_data, m15_data, h1_data):
     h1_data['BB_High_h1'] = h1_data['BB_Mid_h1'] + (h1_data['BB_STD_h1'] * 2)
 
     
+    
     # Tolerance calculation as a percentage of the close price
     # M5 Tolerances in %
 
@@ -307,6 +293,8 @@ def calculate_features(m5_data, m15_data, h1_data):
 
     # Merge dataframes on index
     combined_data = pd.concat([m5_data, m15_data, h1_data], axis=1, join='inner')
+    
+
 
     # Select relevant features
     features = combined_data[['close_m5', 'close_m15', 'close_h1', 
@@ -316,8 +304,94 @@ def calculate_features(m5_data, m15_data, h1_data):
                                'BB_High_m15', 'BB_Low_m15',
                                'MA10_h1', 'MA48_h1', 'EMA200_h1', 
                                'BB_High_h1', 'BB_Low_h1']]
+    
 
     return features.tail(1)
+
+def calculate_overall_volatility_from_df(dataframes, weights=(0.4, 0.3, 0.3)):
+    """
+    Calculate weighted overall volatility based on multiple timeframes.
+    
+    Args:
+        dataframes: List of DataFrames, each representing a different timeframe.
+        weights: Weights to assign to each timeframe.
+    
+    Returns:
+        The weighted overall market volatility.
+    """
+    m15_volatility = calculate_volatility_from_df(dataframes[0])
+    m30_volatility = calculate_volatility_from_df(dataframes[1])
+    h1_volatility = calculate_volatility_from_df(dataframes[2])
+
+    overall_volatility = (weights[0] * m15_volatility) + (weights[1] * m30_volatility) + (weights[2] * h1_volatility)
+    return overall_volatility
+
+
+
+import pandas as pd
+from sklearn.preprocessing import StandardScaler
+
+
+def calculate_features2(m5_data, m15_data, h1_data):
+    # Calculate indicators for M5 timeframe
+    m5_data['close_m5'] = m5_data['close']
+    m5_data['MA10_m5'] = m5_data['close'].rolling(window=10).mean()
+    m5_data['MA48_m5'] = m5_data['close'].rolling(window=48).mean()
+    m5_data['EMA200_m5'] = m5_data['close'].ewm(span=200, adjust=False).mean()
+    m5_data['BB_Mid_m5'] = m5_data['close'].rolling(window=20).mean()
+    m5_data['BB_STD_m5'] = m5_data['close'].rolling(window=20).std()
+    m5_data['BB_Low_m5'] = m5_data['BB_Mid_m5'] - (m5_data['BB_STD_m5'] * 2)
+    m5_data['BB_High_m5'] = m5_data['BB_Mid_m5'] + (m5_data['BB_STD_m5'] * 2)
+
+    # Calculate indicators for M15 timeframe
+    m15_data['close_m15'] = m15_data['close']
+    m15_data['MA10_m15'] = m15_data['close'].rolling(window=10).mean()
+    m15_data['MA48_m15'] = m15_data['close'].rolling(window=48).mean()
+    m15_data['EMA200_m15'] = m15_data['close'].ewm(span=200, adjust=False).mean()
+    m15_data['BB_Mid_m15'] = m15_data['close'].rolling(window=20).mean()
+    m15_data['BB_STD_m15'] = m15_data['close'].rolling(window=20).std()
+    m15_data['BB_Low_m15'] = m15_data['BB_Mid_m15'] - (m15_data['BB_STD_m15'] * 2)
+    m15_data['BB_High_m15'] = m15_data['BB_Mid_m15'] + (m15_data['BB_STD_m15'] * 2)
+
+    # Calculate indicators for H1 timeframe
+    h1_data['close_h1'] = h1_data['close']
+    h1_data['MA10_h1'] = h1_data['close'].rolling(window=10).mean()
+    h1_data['MA48_h1'] = h1_data['close'].rolling(window=48).mean()
+    h1_data['EMA200_h1'] = h1_data['close'].ewm(span=200, adjust=False).mean()
+    h1_data['BB_Mid_h1'] = h1_data['close'].rolling(window=20).mean()
+    h1_data['BB_STD_h1'] = h1_data['close'].rolling(window=20).std()
+    h1_data['BB_Low_h1'] = h1_data['BB_Mid_h1'] - (h1_data['BB_STD_h1'] * 2)
+    h1_data['BB_High_h1'] = h1_data['BB_Mid_h1'] + (h1_data['BB_STD_h1'] * 2)
+
+    
+    
+    # Tolerance calculation as a percentage of the close price
+    # M5 Tolerances in %
+
+    # # Print a sample of the data to check results
+    # print(m5_data[['close', 'MA10_m5', 'Tolerance_MA10_m5', 'Tolerance_EMA200_m5']].tail())
+
+    # Calculate timeframe tolerances
+    m5_data['Timeframe_Tolerance_M5'] = abs(m5_data['close'] - m5_data['MA10_m5']) / m5_data['MA10_m5'] * 100
+    m15_data['Timeframe_Tolerance_M15'] = abs(m15_data['close'] - m15_data['MA10_m15']) / m15_data['MA10_m15'] * 100
+    h1_data['Timeframe_Tolerance_h1'] = abs(h1_data['close'] - h1_data['MA10_h1']) / h1_data['MA10_h1'] * 100
+
+    # Merge dataframes on index
+    combined_data = pd.concat([m5_data, m15_data, h1_data], axis=1, join='inner')
+    scaler = StandardScaler()
+
+
+    # Select relevant features
+    features = combined_data[['close_m5', 'close_m15', 'close_h1', 
+                               'MA10_m5', 'MA48_m5', 'EMA200_m5', 
+                               'BB_High_m5', 'BB_Low_m5',
+                               'MA10_m15', 'MA48_m15', 'EMA200_m15', 
+                               'BB_High_m15', 'BB_Low_m15',
+                               'MA10_h1', 'MA48_h1', 'EMA200_h1', 
+                               'BB_High_h1', 'BB_Low_h1']]
+    feature_scaled = scaler.fit_transform(features)
+
+    return feature_scaled[-1]
 
 def calc_confidence(a, b):
     sign_a = 1 if a  > 0.5 else -1
