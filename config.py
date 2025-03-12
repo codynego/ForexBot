@@ -1,6 +1,4 @@
 
-from pickle import MARK
-from re import T
 from dotenv import load_dotenv
 import os
 
