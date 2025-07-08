@@ -10,7 +10,6 @@ from deriv_api import DerivAPI
 from datetime import datetime, timedelta
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'fxbot.settings')
-
 django.setup()
 
 from tradebot.models import Market, Indicator as IndicatorModel, Signal
@@ -22,7 +21,7 @@ class TradingBot:
         self.prev_predictions = {}
         self.pending_signals = {}
         self.opened_positions = {}
-        self.signal_timestamps = {}  # New cache for signal timestamps
+        self.signal_timestamps = {}  # Cache for signal timestamps per market
     
     async def connect_deriv(self, app_id):
         api = DerivAPI(app_id=app_id)
@@ -63,18 +62,17 @@ class TradingBot:
         print(last_indicator_value)
 
     async def generate_signal(self, data, strategy="rsistrategy", symbol=None):
-        price = data[0]['close'].iloc[-1]
-        signal = {"symbol": symbol, "price": price, "type": None, "strength": None}
-        
-        # Check cooldown period
-        signal_key = (symbol, strategy)
+        # Check cooldown period for the market
         current_time = datetime.now()
-        if signal_key in self.signal_timestamps:
-            last_signal_time = self.signal_timestamps[signal_key]
+        if symbol in self.signal_timestamps:
+            last_signal_time = self.signal_timestamps[symbol]
             if (current_time - last_signal_time) < timedelta(minutes=30):
                 print(f"Cooldown active for {symbol}. Skipping signal generation.")
                 return None
 
+        price = data[0]['close'].iloc[-1]
+        signal = {"symbol": symbol, "price": price, "type": None, "strength": None}
+        
         if strategy == "rsistrategy":
             result = await Strategy.process_multiple_timeframes(data, symbol)
             
@@ -98,7 +96,7 @@ class TradingBot:
 
             # Update timestamp cache if a valid signal is generated
             if signal["type"] is not None:
-                self.signal_timestamps[signal_key] = current_time
+                self.signal_timestamps[symbol] = current_time
             
             return signal
 
