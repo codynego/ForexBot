@@ -173,7 +173,7 @@ if __name__ == "__main__":
 
         asyncio.run(main())
 
-        # Telegram bot setup (if needed for interactivity)
+        # Telegram bot setup (if needed for interactivity) 
         BOT_TOKEN = Config.TELEGRAM_BOT_TOKEN
         app = ApplicationBuilder().token(BOT_TOKEN).build()
         app.add_handler(CommandHandler("start", start))
