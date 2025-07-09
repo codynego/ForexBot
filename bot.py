@@ -7,54 +7,26 @@ import os
 import django
 from asgiref.sync import sync_to_async
 from deriv_api import DerivAPI
-
-
+from datetime import datetime, timedelta
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'fxbot.settings')
-
 django.setup()
 
 from tradebot.models import Market, Indicator as IndicatorModel, Signal
 
 class TradingBot:
     def __init__(self, login, password, server):
-        # self.login = login
-        # self.password = password
-        # self.server = server
         self.connected = False
         self.signals_cache = {}
         self.prev_predictions = {}
         self.pending_signals = {}
         self.opened_positions = {}
     
-    # def connect(self):
-    #     if not mt5.initialize(): # type: ignore
-    #         print("initialize() failed, error code =", mt5.last_error()) # type: ignore
-    #         mt5.shutdown() # type: ignore
-    #         self.connected = False
-    #         return self.connected
-    #     authorized = mt5.login(self.login, password=self.password, server=self.server) # type: ignore
-    #     self.connected = authorized
-    #     return self.connected
-
-    # def disconnect(self):
-    #     mt5.shutdown() # type: ignore
-    #     self.connected = False
-
-    # async def fetch_data(self, symbol, timeframe, start, end):
-    #     if not self.connected:
-    #         raise Exception("Not connected to MT5")
-    #     rates = mt5.copy_rates_range(symbol, timeframe, start, end) # type: ignore
-    #     df = pd.DataFrame(rates)
-    #     return df
-
     async def connect_deriv(self, app_id):
         api = DerivAPI(app_id=app_id)
         api_token = Config.DERIV_API_TOKEN
-
         authorize = await api.authorize(api_token)
         return authorize, api
-
 
     async def fetch_data_Deriv(self, api, symbol, timeframe):
         try:
@@ -74,27 +46,11 @@ class TradingBot:
             print("something went wrong", e)
             return None
 
-    
     async def fetch_all_timeframes(self, api, market):
-
         data_tasks = [self.fetch_data_Deriv(api, market, timeframe) for timeframe in Config.TIME_FRAMES]
         return await asyncio.gather(*data_tasks)
     
-
-
-    async def fetch_data_for_multiple_markets(self,api, markets):
-        """Fetches data for multiple markets and timeframes concurrently.
-
-        Args:
-            markets: A list of market symbols.
-            start: Start date for data retrieval.
-            end: End date for data retrieval.
-            timeframes: A list of timeframes.
-
-        Returns:
-            A dictionary of dataframes, where keys are market symbols and values are lists of dataframes (one for each timeframe).
-        """
-
+    async def fetch_data_for_multiple_markets(self, api, markets):
         data_tasks = [asyncio.create_task(self.fetch_all_timeframes(api, market)) for market in markets]
         return await asyncio.gather(*data_tasks)
             
@@ -105,21 +61,26 @@ class TradingBot:
         print(last_indicator_value)
 
     async def generate_signal(self, data, strategy="rsistrategy", symbol=None):
-        price = data[0]['close'].iloc[-1] # type: ignore
-        # signal = {"symbol": symbol, "price": price, "type": None, "strength": None, "confidence" : None}
-        signal = {"symbol": symbol, "price": price, "type": None, "strength": None,}
+        # Check cooldown period for the market
+        current_time = datetime.now()
+        if symbol in self.signal_timestamps:
+            last_signal_time = self.signal_timestamps[symbol]
+            if (current_time - last_signal_time) < timedelta(minutes=30):
+                print(f"Cooldown active for {symbol}. Skipping signal generation.")
+                return None
+
+        price = data[0]['close'].iloc[-1]
+        signal = {"symbol": symbol, "price": price, "type": None, "strength": None}
+        
         if strategy == "rsistrategy":
-            # stra = Strategy.rsiStrategy(data)
-            result = await Strategy.process_multiple_timeframes(data, symbol) # type: ignore
+            result = await Strategy.process_multiple_timeframes(data, symbol)
             
             if result is None:
                 return None
             stra, strength, all_signals, confidence = result
      
             signal["strength"] = round(strength, 2)
-            # signal['confidence'] = confidence
             
-            #print(all_signals)
             if stra == 1:
                 signal["type"] = all_signals
             elif stra == -1:
@@ -127,72 +88,20 @@ class TradingBot:
             elif stra == 0:
                 signal["type"] = all_signals
 
-
             if signal['symbol'].startswith("BOOM") and signal['type'] == "SELL":
                 return None
             elif signal['symbol'].startswith("CRASH") and signal['type'] == "BUY":
                 return None
 
-            #Check for duplicate signals
-            # signal_key = (symbol, signal["type"])
-            # if signal_key in self.signals_cache:
-            #     return None  # Duplicate found
-
-            # # Save the signal to the database
-            # # saved_signal = await self.save_to_database("Signal", symbol, signal)
-                
-            # # Update cache
-            # self.signals_cache[signal_key] = signal
+            # Update timestamp cache if a valid signal is generated
+            if signal["type"] is not None:
+                self.signal_timestamps[symbol] = current_time
             
             return signal
-            
 
     async def process_multiple_signals(self, data_list, market_list):
-            # run signals concurretly
-            signals = await asyncio.gather(*(self.generate_signal(data, symbol=market) for data, market in zip(data_list, market_list)), return_exceptions=True)
-            return signals
-
-
-    # async def save_to_database(self, model, symbol, data):
-    #     if model == "Market":
-    #         market, created = await sync_to_async(Market.objects.get_or_create)(
-    #             symbol=symbol, 
-    #             defaults={
-    #                 'open': data["open"], 
-    #                 'high': data["high"], 
-    #                 'low': data["low"], 
-    #                 'close': data["close"], 
-    #                 'volume': data["volume"]
-    #             }
-    #         )
-    #         if created:
-    #             await sync_to_async(market.save)()
-    #         return market
-
-    #     elif model == "Indicator":
-    #         indicator, created = await sync_to_async(IndicatorModel.objects.get_or_create)(
-    #             market=symbol, 
-    #             defaults={
-    #                 'rsi': data["rsi"], 
-    #                 'macd': data["macd"], 
-    #                 'bollinger_bands': data["bollinger_bands"], 
-    #                 'moving_average': data["moving_average"]
-    #             }
-    #         )
-    #         if created:
-    #             await sync_to_async(indicator.save)()
-    #         return indicator
-
-    #     elif model == "Signal":
-    #         signal, created = await sync_to_async(Signal.objects.get_or_create)(
-    #             symbol=symbol, 
-    #             price = data["price"],
-    #             type = data["type"], 
-    #             strength = data["strength"],
-    #         )
-    #         if created:
-    #             await sync_to_async(signal.save)()
-    #         return signal
+        signals = await asyncio.gather(*(self.generate_signal(data, symbol=market) for data, market in zip(data_list, market_list)), return_exceptions=True)
+        return signals
 
     def signal_toString(self, signal):
         if signal is None:
@@ -208,6 +117,13 @@ class TradingBot:
             return f"\nSymbol: {signal['symbol']}\nPrice: {signal['price']}\nType: {signal['type']}\nStrength: {signal['strength']}\nEntry: {entry}\nExit: {exit}"
         else:
             return f"\nSymbol: {signal['symbol']}\nPrice: {signal['price']}\nType: {signal['type']}\nStrength: {signal['strength']}"
-      
-        
-        # return f"\nSymbol: {signal['symbol']}\nPrice: {signal['price']}\nType: {signal['type']}\nStrength: {signal['strength']}\nConfidence: {signal['confidence']}"
+
+    async def take_action(self, api_obj, signal):
+        signal_type = signal["type"]
+        symbol = signal["symbol"]
+        price = signal["price"]
+        balance = await api_obj.balance({
+            "balance": 1,
+            "subscribe": 0
+        })
+        print(balance)
