@@ -21,7 +21,6 @@ class TradingBot:
         self.prev_predictions = {}
         self.pending_signals = {}
         self.opened_positions = {}
-        self.signal_timestamps = {}  # Cache for signal timestamps per market
     
     async def connect_deriv(self, app_id):
         api = DerivAPI(app_id=app_id)
