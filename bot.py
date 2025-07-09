@@ -1,4 +1,4 @@
-please take a look at this bot, i wnt it that if it gives a signal for a market now, it should wait 30mins before giving signal for that same market import pandas as pd
+import pandas as pd
 from utils.indicators import Indicator
 from utils.strategies import Strategy
 import asyncio
