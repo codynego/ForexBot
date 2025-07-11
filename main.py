@@ -142,8 +142,8 @@ async def ping_api():
 
 async def schedule_jobs():
     scheduler = AsyncIOScheduler(timezone=utc)
-    scheduler.add_job(ping_api, 'interval', minutes=1)
-    scheduler.add_job(run_bot, 'interval', minutes=15)
+    scheduler.add_job(ping_api, "interval", minutes=1)
+    scheduler.add_job(run_bot, "interval", minutes=2)
     scheduler.start()
 
 
@@ -179,10 +179,5 @@ if __name__ == "__main__":
         app.add_handler(CommandHandler("start", start))
 
     except KeyboardInterrupt:
-<<<<<<< HEAD
         print("Bot shutdown requested.")
         logging.info("Bot stopped manually.")
-=======
-        print("Shutting down bot...")
-        logging.info("Bot stopped manually.")
->>>>>>> parent of aab17d7 (Update main.py change schedule time to 2min)
