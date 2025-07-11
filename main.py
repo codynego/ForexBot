@@ -45,10 +45,10 @@ async def send_message(token, message, symbol):
         return
 
     try:
-        await send_telegram_message(token, premium_channel, message)
+        #await send_telegram_message(token, premium_channel, message)
 
         if FREE_SIGNAL_COUNT < 3 and random.choices([True, False], weights=[1, 3])[0]:
-            await send_telegram_message(token, free_channel, message)
+            #await send_telegram_message(token, free_channel, message)
             FREE_SIGNAL_COUNT += 1
 
         last_telegram_sent[symbol] = now  # update cooldown tracker
