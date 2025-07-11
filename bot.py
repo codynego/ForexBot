@@ -104,23 +104,9 @@ class TradingBot:
         print(last_indicator_value)
 
     async def generate_signal(self, data, strategy="rsistrategy", symbol=None):
-<<<<<<< HEAD
-        # Check cooldown period for the market
-        current_time = datetime.now()
-        if symbol in self.signal_timestamps:
-            last_signal_time = self.signal_timestamps[symbol]
-            if (current_time - last_signal_time) < timedelta(minutes=30):
-                print(f"Cooldown active for {symbol}. Skipping signal generation.")
-                return None
-
-        price = data[0]['close'].iloc[-1]
-        signal = {"symbol": symbol, "price": price, "type": None, "strength": None}
-        
-=======
         price = data[0]['close'].iloc[-1] # type: ignore
         # signal = {"symbol": symbol, "price": price, "type": None, "strength": None, "confidence" : None}
         signal = {"symbol": symbol, "price": price, "type": None, "strength": None,}
->>>>>>> parent of b9e3358 (updated)
         if strategy == "rsistrategy":
             # stra = Strategy.rsiStrategy(data)
             result = await Strategy.process_multiple_timeframes(data, symbol) # type: ignore
@@ -146,11 +132,6 @@ class TradingBot:
             elif signal['symbol'].startswith("CRASH") and signal['type'] == "BUY":
                 return None
 
-<<<<<<< HEAD
-            # Update timestamp cache if a valid signal is generated
-            if signal["type"] is not None:
-                self.signal_timestamps[symbol] = current_time
-=======
             #Check for duplicate signals
             # signal_key = (symbol, signal["type"])
             # if signal_key in self.signals_cache:
@@ -161,7 +142,6 @@ class TradingBot:
                 
             # # Update cache
             # self.signals_cache[signal_key] = signal
->>>>>>> parent of b9e3358 (updated)
             
             return signal
             

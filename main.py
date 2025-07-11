@@ -115,7 +115,7 @@ async def run_bot():
                 print("============================")
 
                 # Send to Telegram with cooldown logic
-                await send_message(Config.TELEGRAM_BOT_TOKEN, signal_text, symbol)
+                #await send_message(Config.TELEGRAM_BOT_TOKEN, signal_text, symbol)
 
     except Exception as e:
         logging.error(f"run_bot failed: {str(e)}")
