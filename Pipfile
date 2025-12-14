@@ -21,6 +21,7 @@ python-dotenv = "*"
 apscheduler = "*"
 joblib = "*"
 pandas = "*"
+scikit-learn = "*"
 
 [dev-packages]
 
