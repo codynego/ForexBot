@@ -105,11 +105,12 @@ async def is_price_near_ma(df, tolerance, ma_period):
         'resistance', 'support', or None (indicating a breakout beyond the threshold).
     """
     indicator = Indicator(df)
+    df = df.copy()
     df['ma'] = indicator.moving_average(ma_period).dropna()
 
     window = 20
     df['support'] = df['low'].rolling(window=window).min()
-    df['resistance'] = df['high'].rolling(window=window).min()
+    df['resistance'] = df['high'].rolling(window=window).max()
 
 
     
@@ -117,12 +118,11 @@ async def is_price_near_ma(df, tolerance, ma_period):
     df['low_breakout'] = df['close'] < df['support'].shift()
 
     latest_row = df.iloc[-1]
-    high_break = latest_row['high_breakout']
-    low_break = latest_row['low_breakout']
-
-    
     price = latest_row['close']
     ma = latest_row['ma']
+
+    if pd.isna(ma):
+        return None
 
     if (abs(price - ma) / ma) * 100 <= tolerance:
         if price > ma:
@@ -143,26 +143,25 @@ async def check_ema(df, tolerance, period=200):
         period (int, optional): Period for EMA calculation. Defaults to 200.
     """
     indicator = Indicator(df)
+    df = df.copy()
     df['ema'] = indicator.ema(period).dropna()
 
  
 
     window = 20
     df['support'] = df['low'].rolling(window=window).min()
-    df['resistance'] = df['high'].rolling(window=window).min()
+    df['resistance'] = df['high'].rolling(window=window).max()
 
     df['high_breakout'] = df['close'] > df['resistance'].shift()
     df['low_breakout'] = df['close'] < df['support'].shift()
 
     latest_row = df.iloc[-1]
 
-    high_break = latest_row['high_breakout']
-    low_break = latest_row['low_breakout']
-    #print(f"high breakout: {high_break}, low break: {low_break}")
-       
     price = latest_row['close']
     ema = latest_row['ema']
 
+    if pd.isna(ema):
+        return None
 
     if (abs(price - ema) / ema) * 100 <= tolerance:
         if price > ema:
@@ -203,6 +202,7 @@ async def is_bollinger_band_support_resistance(df, period=20, std_dev=2):
         'support', 'resistance', or 'neutral'.
     """
     # Calculate Bollinger Bands
+    df = df.copy()
     df[['BB_Low', 'BB_Mid', 'BB_High']] = await calculate_bollinger_bands(df, period, std_dev)
 
     if df['close'].iloc[-1] <= df['BB_Low'].iloc[-1] and df['close'].iloc[-2] > df['BB_Low'].iloc[-2]:
@@ -224,6 +224,7 @@ async def is_price_near_bollinger_band(df, high_tol, low_tol, period=20, std_dev
         'upper_band', 'lower_band', or 'neutral'.
     """
     # Calculate Bollinger Bands
+    df = df.copy()
     df[['BB_Low', 'BB_Mid', 'BB_High']] = await calculate_bollinger_bands(df, period, std_dev)
 
  
@@ -231,26 +232,24 @@ async def is_price_near_bollinger_band(df, high_tol, low_tol, period=20, std_dev
     last_price = df['close'].iloc[-1]
     upper_band_value = df['BB_High'].iloc[-1]
     lower_band_value = df['BB_Low'].iloc[-1]
-    #print("upper band tolerance: ", (abs(last_price - upper_band_value) / upper_band_value) * 100)
-    #print("lower band tolerance: ", (abs(last_price - lower_band_value) / lower_band_value) * 100)
-    if (last_price - upper_band_value) / upper_band_value > high_tol / 2 or (lower_band_value - last_price) / lower_band_value > low_tol / 2:
-        return "neutral"
-    
+
+    if pd.isna(upper_band_value) or pd.isna(lower_band_value):
+        return None
+
+    # Ignore candles that have already broken well outside the bands.
+    if last_price > upper_band_value * (1 + (high_tol / 100)):
+        return None
+    if last_price < lower_band_value * (1 - (low_tol / 100)):
+        return None
+
     upper_tolerance = (abs(last_price - upper_band_value) / upper_band_value) * 100
     lower_tolerance = (abs(last_price - lower_band_value) / lower_band_value) * 100
-    #if upper_tolerance < lower_tolerance:
-    if upper_tolerance <= high_tol or lower_tolerance <= low_tol:
-        if last_price > upper_band_value or last_price < lower_band_value:
-            return "BUY"
-        else:
-            return "SELL"
-    else:
-        return None
-    #     return 'upper_band'
-    # elif abs(last_price - lower_band_value) <= low_tol * lower_band_value:
-    #     return 'lower_band'
-    # else:
-    #     return 'neutral'
+
+    if upper_tolerance <= high_tol and upper_tolerance <= lower_tolerance:
+        return "SELL"
+    if lower_tolerance <= low_tol and lower_tolerance < upper_tolerance:
+        return "BUY"
+    return None
 
 def distance_to_indicator(current_price, indicator_value):
     """

@@ -102,12 +102,17 @@ class Strategy:
         Returns:
             A tuple containing the final signal ("BUY", "SELL", or "HOLD"), the overall signal strength, and detailed signals from each timeframe.
         """
+        if len(dataframes) != 3:
+            return None
+
+        prepared_frames = [df.copy() for df in dataframes]
+        if any(df.empty for df in prepared_frames):
+            return None
+
         #overall_volatility = calculate_overall_volatility_from_df(dataframes)
         #tolerance_adjusted = tolerance * (1 + overall_volatility)
-        features = calculate_features(dataframes[0], dataframes[1], dataframes[2])
-        features2 = calculate_features2(dataframes[0], dataframes[1], dataframes[2])
+        features = calculate_features(prepared_frames[0], prepared_frames[1], prepared_frames[2])
         # path = 'C:/Users/Admin/codynego/mlforfinance/forexBot/Boom500_rf.pkl'
-        #print(features2)
         model_paths = {
             "BOOM1000": 'newmodels/new_Boom1000_rf.pkl',
             "BOOM500": 'newmodels/new_Boom500_rf.pkl',
@@ -149,11 +154,19 @@ class Strategy:
         path = model_paths[symbol]
 
         # load model using joblib
+        if features.empty or features.isnull().values.any():
+            return None
+
         model = joblib.load(path)
         ai_tolerance = model.predict(features)[0]
-        # print(ai_tolerance)
 
-        split_data = np.split(ai_tolerance, len(ai_tolerance) // 5)
+        ai_tolerance = np.asarray(ai_tolerance, dtype=float).flatten()
+        if ai_tolerance.size < 3 or np.isnan(ai_tolerance).any():
+            return None
+
+        split_data = np.array_split(ai_tolerance, 3)
+        if any(len(part) == 0 for part in split_data):
+            return None
 
         # Assign to respective timeframes
         #print(ai_tolerance)
@@ -165,14 +178,12 @@ class Strategy:
         #print(ai_tolerance)
         tasks = []
         task2 = []
-        for df, tol in zip(dataframes, ai_tolerance):
-            strategy = MyStrategy(df)
-            task2.append(asyncio.create_task(get_signal(df, tol, breakout_threshold=min(tol) / 4)))
+        for df, tol in zip(prepared_frames, ai_tolerance):
+            task2.append(asyncio.create_task(get_signal(df.copy(), tol, breakout_threshold=min(tol) / 4)))
             #task2.append(asyncio.create_task(cls.runStrategy(df, tol, breakout_threshold)))
-            tasks.append(asyncio.create_task(compute(df, min(tol))))
+            tasks.append(asyncio.create_task(compute(df.copy(), min(tol))))
             # market_strength = compute(df, min(tol))
             # print(market_strength)
-            #tasks.append(asyncio.create_task(strategy.run(min(tol))))
             ##print("new timeframes: ==============================================")
         #print("new market: =================================" )
         result_signals = await asyncio.gather(*task2)  # Signals from runStrategy
@@ -248,6 +259,10 @@ from sklearn.preprocessing import StandardScaler
 
 
 def calculate_features(m5_data, m15_data, h1_data):
+    m5_data = m5_data.copy()
+    m15_data = m15_data.copy()
+    h1_data = h1_data.copy()
+
     # Calculate indicators for M5 timeframe
     m5_data['close_m5'] = m5_data['close']
     m5_data['MA10_m5'] = m5_data['close'].rolling(window=10).mean()
@@ -306,6 +321,7 @@ def calculate_features(m5_data, m15_data, h1_data):
                                'BB_High_h1', 'BB_Low_h1']]
     
 
+    features = features.dropna()
     return features.tail(1)
 
 def calculate_overall_volatility_from_df(dataframes, weights=(0.4, 0.3, 0.3)):
@@ -333,6 +349,10 @@ from sklearn.preprocessing import StandardScaler
 
 
 def calculate_features2(m5_data, m15_data, h1_data):
+    m5_data = m5_data.copy()
+    m15_data = m15_data.copy()
+    h1_data = h1_data.copy()
+
     # Calculate indicators for M5 timeframe
     m5_data['close_m5'] = m5_data['close']
     m5_data['MA10_m5'] = m5_data['close'].rolling(window=10).mean()
@@ -389,6 +409,10 @@ def calculate_features2(m5_data, m15_data, h1_data):
                                'BB_High_m15', 'BB_Low_m15',
                                'MA10_h1', 'MA48_h1', 'EMA200_h1', 
                                'BB_High_h1', 'BB_Low_h1']]
+    features = features.dropna()
+    if features.empty:
+        return np.array([])
+
     feature_scaled = scaler.fit_transform(features)
 
     return feature_scaled[-1]

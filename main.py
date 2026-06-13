@@ -1,171 +1,263 @@
 import asyncio
 import logging
 import random
+from contextlib import suppress
 from datetime import datetime, timedelta
-from pytz import utc
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from telegram.ext import ApplicationBuilder, CommandHandler
-from config import Config
-from bot import TradingBot
-from deriv_api import DerivAPI
-from telebot import send_telegram_message, start
 
-# Setup logging
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.triggers.interval import IntervalTrigger
+from pytz import utc
+
+from bot import TradingBot
+from config import Config
+from telebot import send_telegram_message
+
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s",
 )
 
-# Initialize bot and API
+
 bot = TradingBot(Config.MT5_LOGIN, Config.MT5_PASSWORD, Config.MT5_SERVER)
-connection = None
 new_api = None
 
-# Cooldown and signal tracking
 FREE_SIGNAL_COUNT = 0
 LAST_RESET_TIME = datetime.now(utc)
-last_telegram_sent = {}  # {symbol: datetime}
+last_telegram_sent = {}
+
+# The Deriv websocket client is shared across jobs, so we guard it to avoid
+# concurrent requests leaving the connection in a bad state.
+api_lock = asyncio.Lock()
+run_lock = asyncio.Lock()
+
+
+async def close_api():
+    global new_api
+    if not new_api:
+        return
+
+    for method_name in ("disconnect", "close", "clear"):
+        method = getattr(new_api, method_name, None)
+        if not method:
+            continue
+
+        try:
+            result = method()
+            if asyncio.iscoroutine(result):
+                await result
+        except Exception:
+            logging.exception("Failed while closing Deriv API with %s", method_name)
+        finally:
+            break
+
+    new_api = None
+
 
 async def send_message(token, message, symbol):
     global FREE_SIGNAL_COUNT, LAST_RESET_TIME, last_telegram_sent
 
     now = datetime.now(utc)
-
-    # Reset daily free signal limit every 24 hours
     if now - LAST_RESET_TIME >= timedelta(hours=24):
         FREE_SIGNAL_COUNT = 0
         LAST_RESET_TIME = now
 
-    # Check 30-minute cooldown for this symbol
     last_sent = last_telegram_sent.get(symbol)
     if last_sent and (now - last_sent) < timedelta(minutes=30):
         cooldown_end = last_sent + timedelta(minutes=30)
-        logging.info(f"[{symbol}] Cooldown active until {cooldown_end}, skipping Telegram.")
+        logging.info("[%s] Cooldown active until %s, skipping Telegram.", symbol, cooldown_end)
         return
 
     try:
-        # Send to premium channel
         await send_telegram_message(token, Config.TELEGRAM_CHANNEL_ID, message)
 
-        # Send to free channel (limited to 3 signals/day, 25% chance)
         if FREE_SIGNAL_COUNT < 3 and random.choices([True, False], weights=[1, 3])[0]:
             await send_telegram_message(token, Config.TELEGRAM_FREE_CHANNEL_ID, message)
             FREE_SIGNAL_COUNT += 1
 
-        last_telegram_sent[symbol] = now  # Update cooldown tracker
-        logging.info(f"Sent signal for {symbol}: {message}")
+        last_telegram_sent[symbol] = now
+        logging.info("Sent signal for %s", symbol)
+    except Exception:
+        logging.exception("Error sending Telegram message for %s", symbol)
 
-    except Exception as e:
-        logging.error(f"Error sending Telegram message: {str(e)}")
 
 async def reconnect():
-    global connection, new_api
-    for attempt in range(5):
-        try:
-            connection, new_api = await bot.connect_deriv(app_id="1089")
-            if connection:
-                ping = await new_api.ping({"ping": 1})
-                if ping.get("ping"):
-                    logging.info("Deriv API reconnected successfully.")
-                    return True
-        except Exception as e:
-            logging.error(f"Reconnect attempt {attempt + 1} failed: {e}")
-        await asyncio.sleep(10)
+    global new_api
+
+    async with api_lock:
+        await close_api()
+
+        for attempt in range(1, 6):
+            candidate_api = None
+            try:
+                _, candidate_api = await bot.connect_deriv(app_id="1089")
+                await asyncio.wait_for(candidate_api.ping({"ping": 1}), timeout=20)
+                new_api = candidate_api
+                logging.info("Deriv API connected on attempt %s.", attempt)
+                return True
+            except Exception:
+                logging.exception("Reconnect attempt %s failed", attempt)
+                with suppress(Exception):
+                    close_result = getattr(candidate_api, "disconnect", None)
+                    if close_result:
+                        result = close_result()
+                        if asyncio.iscoroutine(result):
+                            await result
+            await asyncio.sleep(5)
+
     logging.error("Max reconnect attempts reached.")
     return False
 
-async def run_bot():
-    global connection, new_api
 
-    try:
-        if not new_api:
-            logging.warning("API not connected. Attempting to reconnect...")
-            if not await reconnect():
+async def ensure_connection():
+    if new_api is not None:
+        return True
+    logging.warning("API not connected. Attempting reconnect.")
+    return await reconnect()
+
+
+def is_actionable_signal(signal):
+    if signal is None:
+        return False
+
+    signal_type = signal.get("type")
+    if signal_type == "HOLD":
+        return False
+    if not isinstance(signal_type, list):
+        return False
+    if signal_type.count("HOLD") > 1:
+        return False
+    if signal_type.count("BUY") == 1 and signal_type.count("SELL") == 1:
+        return False
+
+    symbol = signal.get("symbol", "")
+    if symbol.startswith("BOOM") and signal_type.count("SELL") > 1:
+        return False
+    if symbol.startswith("CRASH") and signal_type.count("BUY") > 1:
+        return False
+    return True
+
+
+async def run_bot():
+    if run_lock.locked():
+        logging.warning("Previous run is still active; skipping overlapping cycle.")
+        return
+
+    async with run_lock:
+        if not await ensure_connection():
+            return
+
+        try:
+            logging.info("Fetching market data...")
+            async with api_lock:
+                data = await asyncio.wait_for(
+                    bot.fetch_data_for_multiple_markets(new_api, Config.MARKETS_LIST),
+                    timeout=60,
+                )
+
+            if not data or len(data) != len(Config.MARKETS_LIST):
+                logging.error("Received incomplete market data; skipping this cycle.")
+                await reconnect()
                 return
 
-        logging.info("Fetching market data...")
-        data = await bot.fetch_data_for_multiple_markets(new_api, Config.MARKETS_LIST)
-        signals = await bot.process_multiple_signals(data, Config.MARKETS_LIST)
+            valid_pairs = []
+            for market, market_data in zip(Config.MARKETS_LIST, data):
+                if not market_data or any(frame is None or frame.empty for frame in market_data):
+                    logging.warning("Missing candles for %s; skipping it this cycle.", market)
+                    continue
+                valid_pairs.append((market_data, market))
 
-        for signal in signals:
-            if signal is None:
-                continue
+            if not valid_pairs:
+                logging.error("No valid market data was available.")
+                await reconnect()
+                return
 
-            symbol = signal["symbol"]
-            signal_type = signal["type"]
+            signals = await bot.process_multiple_signals(
+                [market_data for market_data, _ in valid_pairs],
+                [market for _, market in valid_pairs],
+            )
 
-            # Filter invalid signals
-            if symbol.startswith("BOOM") and signal_type.count("SELL") > 1:
-                continue
-            if symbol.startswith("CRASH") and signal_type.count("BUY") > 1:
-                continue
-            if signal_type.count("HOLD") > 1:
-                continue
-            if signal_type.count("BUY") == 1 and signal_type.count("SELL") == 1:
-                continue
-            if signal_type == "HOLD":
-                continue
+            for market, signal in zip([market for _, market in valid_pairs], signals):
+                if isinstance(signal, Exception):
+                    logging.error(
+                        "Signal generation failed for %s",
+                        market,
+                        exc_info=(type(signal), signal, signal.__traceback__),
+                    )
+                    continue
+                if not is_actionable_signal(signal):
+                    continue
 
-            signal_text = bot.signal_toString(signal)
-            print(signal_text)
-            print("============================")
+                signal_text = bot.signal_toString(signal)
+                if not signal_text:
+                    continue
 
-            # Send signal with cooldown check
-            await send_message(Config.TELEGRAM_BOT_TOKEN, signal_text, symbol)
+                logging.info("Actionable signal generated for %s", market)
+                print(signal_text)
+                print("============================")
+                await send_message(Config.TELEGRAM_BOT_TOKEN, signal_text, market)
 
-    except Exception as e:
-        logging.error(f"run_bot failed: {str(e)}")
-        if await reconnect():
-            await run_bot()
-        else:
-            logging.error("run_bot retry failed.")
+        except asyncio.TimeoutError:
+            logging.exception("run_bot timed out; reconnecting.")
+            await reconnect()
+        except Exception:
+            logging.exception("run_bot failed unexpectedly")
+            await reconnect()
+
 
 async def ping_api():
-    global connection, new_api
+    if not await ensure_connection():
+        return
+
     try:
-        if new_api:
-            ping = await new_api.ping({"ping": 1})
-            logging.info(f"Ping successful: {ping['ping']}")
-        else:
-            logging.warning("API is None, ping skipped.")
-            await reconnect()
-    except Exception as e:
-        logging.error(f"Ping error: {str(e)}")
+        async with api_lock:
+            ping = await asyncio.wait_for(new_api.ping({"ping": 1}), timeout=20)
+        logging.info("Ping successful: %s", ping.get("ping"))
+    except Exception:
+        logging.exception("Ping error")
         await reconnect()
+
 
 async def schedule_jobs():
     scheduler = AsyncIOScheduler(timezone=utc)
-    scheduler.add_job(ping_api, "interval", minutes=1)
-    scheduler.add_job(run_bot, "interval", minutes=2)
+    scheduler.add_job(
+        ping_api,
+        trigger=IntervalTrigger(minutes=1),
+        max_instances=1,
+        coalesce=True,
+        misfire_grace_time=30,
+    )
+    scheduler.add_job(
+        run_bot,
+        trigger=IntervalTrigger(minutes=2),
+        max_instances=1,
+        coalesce=True,
+        misfire_grace_time=60,
+    )
     scheduler.start()
+    return scheduler
+
 
 async def main():
-    global connection, new_api
-
-    connection, new_api = await bot.connect_deriv(app_id="1089")
-
-    if not connection:
-        logging.warning("Initial connection failed. Attempting to reconnect...")
-        await reconnect()
-
-    if connection:
-        logging.info("Bot connected to Deriv API.")
-        await new_api.ping({"ping": 1})
-        await schedule_jobs()
-    else:
-        logging.error("Failed to establish connection.")
-
-    while True:
-        await asyncio.sleep(1)
-
-if __name__ == "__main__":
+    scheduler = None
     try:
-        asyncio.run(main())
+        if not await reconnect():
+            logging.error("Failed to establish initial Deriv connection.")
+            return
 
-        # Telegram bot setup for interactivity
-        app = ApplicationBuilder().token(Config.TELEGRAM_BOT_TOKEN).build()
-        app.add_handler(CommandHandler("start", start))
-        app.run_polling()
+        logging.info("Bot connected to Deriv API.")
+        scheduler = await schedule_jobs()
+        await run_bot()
+
+        while True:
+            await asyncio.sleep(60)
     except KeyboardInterrupt:
         logging.info("Bot stopped manually.")
-        print("Bot shutdown requested.")
+    finally:
+        if scheduler:
+            scheduler.shutdown(wait=False)
+        await close_api()
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
