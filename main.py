@@ -25,6 +25,7 @@ new_api = None
 FREE_SIGNAL_COUNT = 0
 LAST_RESET_TIME = datetime.now(utc)
 last_telegram_sent = {}
+last_api_activity = None
 
 # The Deriv websocket client is shared across jobs, so we guard it to avoid
 # concurrent requests leaving the connection in a bad state.
@@ -33,7 +34,7 @@ run_lock = asyncio.Lock()
 
 
 async def close_api():
-    global new_api
+    global new_api, last_api_activity
     if not new_api:
         return
 
@@ -52,6 +53,32 @@ async def close_api():
             break
 
     new_api = None
+    last_api_activity = None
+
+
+async def call_api(operation_name, coroutine_factory, timeout):
+    global last_api_activity
+
+    async with api_lock:
+        if new_api is None:
+            raise ConnectionError("Deriv API client is not connected.")
+
+        try:
+            result = await asyncio.wait_for(coroutine_factory(new_api), timeout=timeout)
+            last_api_activity = datetime.now(utc)
+            return result
+        except asyncio.TimeoutError:
+            logging.error("%s timed out after %ss. Recycling Deriv connection.", operation_name, timeout)
+            await close_api()
+            raise
+        except asyncio.CancelledError:
+            logging.error("%s was cancelled. Recycling Deriv connection.", operation_name)
+            await close_api()
+            raise
+        except Exception:
+            logging.exception("%s failed. Recycling Deriv connection.", operation_name)
+            await close_api()
+            raise
 
 
 async def send_message(token, message, symbol):
@@ -82,7 +109,7 @@ async def send_message(token, message, symbol):
 
 
 async def reconnect():
-    global new_api
+    global new_api, last_api_activity
 
     async with api_lock:
         await close_api()
@@ -91,8 +118,8 @@ async def reconnect():
             candidate_api = None
             try:
                 _, candidate_api = await bot.connect_deriv(app_id="1089")
-                await asyncio.wait_for(candidate_api.ping({"ping": 1}), timeout=20)
                 new_api = candidate_api
+                last_api_activity = datetime.now(utc)
                 logging.info("Deriv API connected on attempt %s.", attempt)
                 return True
             except Exception:
@@ -149,11 +176,11 @@ async def run_bot():
 
         try:
             logging.info("Fetching market data...")
-            async with api_lock:
-                data = await asyncio.wait_for(
-                    bot.fetch_data_for_multiple_markets(new_api, Config.MARKETS_LIST),
-                    timeout=60,
-                )
+            data = await call_api(
+                "fetch_data_for_multiple_markets",
+                lambda api: bot.fetch_data_for_multiple_markets(api, Config.MARKETS_LIST),
+                timeout=60,
+            )
 
             if not data or len(data) != len(Config.MARKETS_LIST):
                 logging.error("Received incomplete market data; skipping this cycle.")
@@ -210,8 +237,19 @@ async def ping_api():
         return
 
     try:
-        async with api_lock:
-            ping = await asyncio.wait_for(new_api.ping({"ping": 1}), timeout=20)
+        if run_lock.locked():
+            logging.info("Skipping ping while signal cycle is running.")
+            return
+
+        if last_api_activity and (datetime.now(utc) - last_api_activity) < timedelta(seconds=90):
+            logging.info("Skipping ping because the Deriv connection was recently active.")
+            return
+
+        ping = await call_api(
+            "ping",
+            lambda api: api.ping({"ping": 1}),
+            timeout=20,
+        )
         logging.info("Ping successful: %s", ping.get("ping"))
     except Exception:
         logging.exception("Ping error")
