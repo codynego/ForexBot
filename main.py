@@ -117,7 +117,7 @@ async def reconnect():
         for attempt in range(1, 6):
             candidate_api = None
             try:
-                _, candidate_api = await bot.connect_deriv(app_id="1089")
+                _, candidate_api = await bot.connect_deriv(app_id=Config.DERIV_APP_ID)
                 new_api = candidate_api
                 last_api_activity = datetime.now(utc)
                 logging.info("Deriv API connected on attempt %s.", attempt)

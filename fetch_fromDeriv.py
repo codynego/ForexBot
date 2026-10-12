@@ -26,7 +26,7 @@ async def fecth_data(app_id):
         print(df)
 
 async def main():
-    app_id = '1089'
+    app_id = Config.DERIV_APP_ID
     await fecth_data(app_id)
 
 if __name__ == "__main__":

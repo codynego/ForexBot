@@ -1,5 +1,4 @@
 
-from pickle import MARK
 from dotenv import load_dotenv
 import os
 
@@ -12,19 +11,20 @@ class Config:
 
 
     #MT5 LOGINS
-    MT5_LOGIN = int(os.environ['MT5_LOGIN'])
-    MT5_PASSWORD = os.environ['MT5_PASSWORD']
-    MT5_SERVER = os.environ['MT5_SERVER']
+    MT5_LOGIN = int(os.environ.get('MT5_LOGIN') or 0)
+    MT5_PASSWORD = os.environ.get('MT5_PASSWORD', '')
+    MT5_SERVER = os.environ.get('MT5_SERVER', '')
     MT5_PATH = ""
 
     #DERIV API
-    DERIV_API_TOKEN = os.environ['DERIV_API_TOKEN']
+    DERIV_APP_ID = os.environ.get('DERIV_APP_ID', '')
+    DERIV_API_TOKEN = os.environ.get('DERIV_API_TOKEN', '')
 
     #TELEGRAM TOKEN
-    TELEGRAM_BOT_TOKEN = os.environ['TELEGRAM_BOT_TOKEN']
-    TELEGRAM_CHAT_ID = os.environ['TELEGRAM_CHAT_ID']
-    TELEGRAM_CHANNEL_ID = os.environ['TELEGRAM_CHANNEL_ID']
-    TELEGRAM_FREE_CHANNEL_ID = os.environ['FREE_TELEGRAM_CHANNEL_ID']
+    TELEGRAM_BOT_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN', '')
+    TELEGRAM_CHAT_ID = os.environ.get('TELEGRAM_CHAT_ID', '')
+    TELEGRAM_CHANNEL_ID = os.environ.get('TELEGRAM_CHANNEL_ID', '')
+    TELEGRAM_FREE_CHANNEL_ID = os.environ.get('FREE_TELEGRAM_CHANNEL_ID', '')
     BACKTEST_ID = os.environ.get('BACKTEST_ID', 'default_value_here')  # Replace 'default_value_here' with your actual default, e.g., 'test' or None
 
     #MARKETS_LIST = ["Boom 1000 Index", "Crash 1000 Index"]
