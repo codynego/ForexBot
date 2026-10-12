@@ -117,14 +117,14 @@ async def reconnect():
         for attempt in range(1, 6):
             candidate_api = None
             try:
-                authorization, candidate_api = await asyncio.wait_for(
+                connection_info, candidate_api = await asyncio.wait_for(
                     bot.connect_deriv(app_id=Config.DERIV_APP_ID), timeout=20
                 )
-                if not isinstance(authorization, dict) or "authorize" not in authorization:
-                    raise ConnectionError("Deriv rejected the API token.")
+                if connection_info.get("connection") != "public-market-data":
+                    raise ConnectionError("Deriv public market-data connection was not established.")
                 new_api = candidate_api
                 last_api_activity = datetime.now(utc)
-                logging.info("Deriv API authorized and connected on attempt %s.", attempt)
+                logging.info("Deriv public market-data WebSocket connected on attempt %s.", attempt)
                 return True
             except Exception:
                 logging.exception("Reconnect attempt %s failed", attempt)
@@ -296,21 +296,6 @@ async def schedule_jobs():
 async def main():
     scheduler = None
     try:
-        missing_deriv_settings = [
-            name
-            for name, value in (
-                ("DERIV_APP_ID", Config.DERIV_APP_ID),
-                ("DERIV_API_TOKEN", Config.DERIV_API_TOKEN),
-            )
-            if not value
-        ]
-        if missing_deriv_settings:
-            logging.error(
-                "Missing Deriv configuration: %s. Add these as hosting environment variables.",
-                ", ".join(missing_deriv_settings),
-            )
-            return
-
         if not await reconnect():
             logging.error("Failed to establish initial Deriv connection.")
             return

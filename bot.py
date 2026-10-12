@@ -1,12 +1,13 @@
 import pandas as pd
+import asyncio
+import json
 from utils.indicators import Indicator
 from utils.strategies import Strategy
-import asyncio
 from config import Config
 import os
 import django
 from asgiref.sync import sync_to_async
-from deriv_api import DerivAPI
+import websockets
 
 
 
@@ -14,6 +15,51 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'fxbot.settings')
 django.setup()
 
 from tradebot.models import Market, Indicator as IndicatorModel, Signal
+
+
+class DerivMarketDataClient:
+    """Small client for Deriv's current public market-data WebSocket API."""
+
+    ENDPOINT = "wss://api.derivws.com/trading/v1/options/ws/public"
+
+    def __init__(self):
+        self.websocket = None
+        self.request_lock = asyncio.Lock()
+
+    async def connect(self):
+        self.websocket = await websockets.connect(
+            self.ENDPOINT,
+            open_timeout=20,
+            ping_interval=20,
+            ping_timeout=20,
+        )
+
+    async def disconnect(self):
+        if self.websocket is not None:
+            await self.websocket.close()
+            self.websocket = None
+
+    async def _request(self, request, expected_message_type):
+        async with self.request_lock:
+            if self.websocket is None or self.websocket.closed:
+                await self.connect()
+
+            await self.websocket.send(json.dumps(request))
+            while True:
+                response = json.loads(
+                    await asyncio.wait_for(self.websocket.recv(), timeout=20)
+                )
+                if response.get("error"):
+                    raise ConnectionError(response["error"].get("message", "Deriv request failed"))
+                if response.get("msg_type") == expected_message_type:
+                    return response
+
+    async def ticks_history(self, request):
+        return await self._request(request, "candles")
+
+    async def ping(self, request):
+        return await self._request(request, "ping")
+
 
 class TradingBot:
     def __init__(self, login, password, server):
@@ -47,12 +93,11 @@ class TradingBot:
     #     df = pd.DataFrame(rates)
     #     return df
 
-    async def connect_deriv(self, app_id):
-        api = DerivAPI(app_id=app_id)
-        api_token = Config.DERIV_API_TOKEN
-
-        authorize = await api.authorize(api_token)
-        return authorize, api
+    async def connect_deriv(self, app_id=None):
+        """Connect to Deriv's public endpoint used for market-data signals."""
+        api = DerivMarketDataClient()
+        await api.connect()
+        return {"connection": "public-market-data"}, api
 
 
     async def fetch_data_Deriv(self, api, symbol, timeframe):
