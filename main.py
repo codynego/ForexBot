@@ -117,10 +117,14 @@ async def reconnect():
         for attempt in range(1, 6):
             candidate_api = None
             try:
-                _, candidate_api = await bot.connect_deriv(app_id=Config.DERIV_APP_ID)
+                authorization, candidate_api = await asyncio.wait_for(
+                    bot.connect_deriv(app_id=Config.DERIV_APP_ID), timeout=20
+                )
+                if not isinstance(authorization, dict) or "authorize" not in authorization:
+                    raise ConnectionError("Deriv rejected the API token.")
                 new_api = candidate_api
                 last_api_activity = datetime.now(utc)
-                logging.info("Deriv API connected on attempt %s.", attempt)
+                logging.info("Deriv API authorized and connected on attempt %s.", attempt)
                 return True
             except Exception:
                 logging.exception("Reconnect attempt %s failed", attempt)
@@ -143,26 +147,30 @@ async def ensure_connection():
     return await reconnect()
 
 
-def is_actionable_signal(signal):
+def signal_rejection_reason(signal):
     if signal is None:
-        return False
+        return "strategy returned no signal"
 
     signal_type = signal.get("type")
     if signal_type == "HOLD":
-        return False
+        return "all timeframes are neutral"
     if not isinstance(signal_type, list):
-        return False
+        return "unexpected signal format"
     if signal_type.count("HOLD") > 1:
-        return False
+        return "more than one timeframe is neutral"
     if signal_type.count("BUY") == 1 and signal_type.count("SELL") == 1:
-        return False
+        return "timeframes disagree between BUY and SELL"
 
     symbol = signal.get("symbol", "")
     if symbol.startswith("BOOM") and signal_type.count("SELL") > 1:
-        return False
+        return "BOOM sell protection rejected the signal"
     if symbol.startswith("CRASH") and signal_type.count("BUY") > 1:
-        return False
-    return True
+        return "CRASH buy protection rejected the signal"
+    return None
+
+
+def is_actionable_signal(signal):
+    return signal_rejection_reason(signal) is None
 
 
 async def run_bot():
@@ -192,6 +200,7 @@ async def run_bot():
                 if not market_data or any(frame is None or frame.empty for frame in market_data):
                     logging.warning("Missing candles for %s; skipping it this cycle.", market)
                     continue
+                logging.info("[%s] Received %s candles for each timeframe.", market, [len(frame) for frame in market_data])
                 valid_pairs.append((market_data, market))
 
             if not valid_pairs:
@@ -212,7 +221,15 @@ async def run_bot():
                         exc_info=(type(signal), signal, signal.__traceback__),
                     )
                     continue
-                if not is_actionable_signal(signal):
+                logging.info(
+                    "[%s] Strategy result: %s (strength=%s)",
+                    market,
+                    signal.get("type") if signal else None,
+                    signal.get("strength") if signal else None,
+                )
+                rejection_reason = signal_rejection_reason(signal)
+                if rejection_reason:
+                    logging.info("[%s] Signal skipped: %s.", market, rejection_reason)
                     continue
 
                 signal_text = bot.signal_toString(signal)
@@ -279,6 +296,21 @@ async def schedule_jobs():
 async def main():
     scheduler = None
     try:
+        missing_deriv_settings = [
+            name
+            for name, value in (
+                ("DERIV_APP_ID", Config.DERIV_APP_ID),
+                ("DERIV_API_TOKEN", Config.DERIV_API_TOKEN),
+            )
+            if not value
+        ]
+        if missing_deriv_settings:
+            logging.error(
+                "Missing Deriv configuration: %s. Add these as hosting environment variables.",
+                ", ".join(missing_deriv_settings),
+            )
+            return
+
         if not await reconnect():
             logging.error("Failed to establish initial Deriv connection.")
             return
